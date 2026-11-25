@@ -1,0 +1,10 @@
+﻿/* Hide only the API information section.
+   Swagger endpoints and Try it out remain functional. */
+/*.swagger-ui .information-container {
+    display: none !important;
+}*/
+
+/* Hide the Swagger JSON URL/link only */
+.swagger-ui .info .link {
+    display: none !important;
+}

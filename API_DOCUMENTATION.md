@@ -1,0 +1,993 @@
+# QuickBalance API – Frontend Guide
+
+Base URL (dev): `http://localhost:5161` · Swagger: `/swagger` · All routes start with `/api/v1`.
+JSON is **camelCase**. Every endpoint except `POST /auth/login` needs `Authorization: Bearer <token>`.
+
+## Common Rules
+
+**Success**
+```json
+{ "status": true, "message": "Brand retrieved successfully.", "data": { }, "pagination": { "page": 1, "pageSize": 20, "totalRecords": 45, "totalPages": 3 } }
+```
+`pagination` appears only on paged lists. `data` is omitted when there is nothing to return (e.g. create/update/delete).
+
+**Error** – business and validation errors return HTTP **400**:
+```json
+{ "status": false, "message": "Brand name already exists." }
+```
+
+| HTTP | Meaning |
+|---|---|
+| 200 | OK (`status: true`) |
+| 400 | Validation / business error – show `message` |
+| 401 | Missing, expired or revoked token (`"Unauthorized user."`) |
+| 403 | Not allowed |
+| 429 | Login rate limit |
+| 500 | Server error |
+
+**Standard master CRUD** (used by most masters)
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/` | Paged list: `?page=1&pageSize=20&search=` |
+| GET | `/{id}` | Single record |
+| POST | `/` | Create |
+| PUT | `/{id}` | Update (send the full body) |
+| DELETE | `/{id}` | Delete |
+
+- `page` ≥ 1 (default 1). `pageSize` is clamped to 1–100 (default 20).
+- Text fields are trimmed by the server. Duplicate checks are done on save.
+- Create/update/delete responses carry only `status` + `message`, so re-fetch the list or record if you need the new data.
+
+---
+
+## 01. Authentication — `/api/v1/auth`
+
+| Method | Endpoint | Auth | Purpose |
+|---|---|---|---|
+| POST | `/login` | No | Get a JWT |
+| POST | `/logout` | Yes | Revoke the current token |
+
+**Login body**
+
+| Field | Type | Req | Notes |
+|---|---|---|---|
+| loginUserName | string | ✅ | Username |
+| loginPassword | string | ✅ | Password |
+
+```json
+// POST /api/v1/auth/login
+{ "loginUserName": "admin", "loginPassword": "secret" }
+```
+```json
+// 200
+{ "status": true, "message": "Login successful.", "data": { "token": "eyJhbGciOi..." } }
+```
+
+- Send the token on every call: `Authorization: Bearer <token>`. It expires after the configured time (default 8 h); there is no refresh endpoint – log in again on 401.
+- Errors: `400` missing username/password, `401` `"Invalid username or password."`, `429` `"Too many login attempts..."` (limit: **4 attempts/min per IP**).
+- Logout: no body. After logout the token is rejected (401) even if not yet expired.
+
+---
+
+## 02. Ledger Group — `/api/v1/ledger-groups`
+
+Chart-of-accounts groups. A group is either a **main group** (`mainGroup: true`) or a **sub-group** under a main group.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/` | Paged list |
+| GET | `/{id}` | Single group |
+| POST / PUT | `/`, `/{id}` | Create / update |
+| DELETE | `/{id}` | Soft delete |
+| GET | `/customer-supplier?type=C` | Ledger groups for customers (`C`) or suppliers (`S`) — `type` required |
+| GET | `/lookups/final-accounts` | Dropdown: `[{ code, finalAccount }]` → P Profit & Loss, T Trading, B Balance Sheet, M Manufacturing |
+
+**List:** `?page=1&pageSize=20&search=&active=true` — `search` matches groupName, secondName and groupCode. `pageSize` must be 1–100 (otherwise 400).
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| groupName | string | ✅ | Unique |
+| secondName | string | – | |
+| mainGroup | bool | – | Default `true`. `false` = sub-group |
+| mainGroupId | int | ✅ if `mainGroup=false` | Parent group id; must exist, be active, and not be the group itself |
+| finalAccount | string | ✅ if `mainGroup=true` | `P`, `T`, `B` or `M`. Sub-groups inherit it from the parent |
+| crDr | string | ✅ if `mainGroup=true` | `CR` or `DR`. Sub-groups inherit it from the parent |
+| subLedgerFlag | bool | – | Default `false` |
+| groupCode | int | – | **Ignored on create** (auto-generated). On update, `null`/`0` keeps the current code |
+| sequenceNo | int | – | `null`/`0` = auto (create) or keep (update). Must be unique |
+| isActive | bool | – | Default `true` |
+
+**Response fields:** `id`, `groupName`, `secondName`, `groupCode`, `finalAccount`, `subLedgerFlag`, `mainGroup`, `mainGroupId`, `sequenceNo`, `crDr`, `isActive`.
+
+```json
+// POST /api/v1/ledger-groups  (sub-group)
+{ "groupName": "Petty Cash", "mainGroup": false, "mainGroupId": 3, "isActive": true }
+```
+
+Errors: `"Group name already in use."`, `"Choose main group."`, `"Selected main group is inactive."`, `"Invalid Final Account selection. Allowed values are P, T, B or M."`, `"Default type must be CR or DR."`, `"Group Code already in use."`, `"Sequence No. already in use."`.
+Delete is blocked with `"System group cannot be deleted."` (ids 1, 4, 26, 27), `"Ledger group has sub-groups and cannot be deleted."` or `"Ledger group has accounts and cannot be deleted."`.
+
+---
+
+## 03. Account Ledger — `/api/v1/accounts`
+
+Ledger accounts (chart of accounts). Account codes are generated by the server from the ledger group.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/` | Paged list |
+| GET | `/{id}` | Single account (includes `rowVersion`) |
+| POST | `/` | Create |
+| PUT | `/{id}` | Update (**needs `rowVersion`**) |
+| DELETE | `/{id}` | Soft delete |
+| GET | `/{id}/opening` | Opening balance of one account |
+| GET | `/group/{groupId}` | All accounts of a ledger group (not paged) |
+
+**List:** `?page=1&pageSize=20&search=&active=true` — `search` matches accountCode, name, alias, secondName and phone. `pageSize` 1–100 (otherwise 400).
+
+> ⚠️ Note: this list returns a **different envelope** — no `status`/`message`, and paging is at the top level:
+> `{ "data": [...], "page": 1, "pageSize": 20, "totalRecords": 45, "totalPages": 3 }`
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| accountName | string(100) | ✅ | 2–100 chars, unique |
+| groupId | int | ✅ | Ledger group id (≥ 1) |
+| openingBalanceType | string | ✅ | `"CR"` or `"DR"` (default `CR`) |
+| openingBalance | decimal | – | 0 – 10,000,000 |
+| alias | string(100) | – | |
+| secondName | string(100) | – | |
+| address | string(100) | – | |
+| phone | string | – | |
+| printName | string | – | |
+| depreciation | decimal | – | 0–1000 (%) |
+| vatFlag | bool | – | `true` → `vatPercentage` must be > 0 |
+| vatPercentage | decimal | ✅ if `vatFlag` | 0–100 |
+| taxReturnFlag | bool | – | |
+| bankAccountName, bankAccountNumber, branch, ibanNumber, swiftCode | string | – | Bank details |
+| currencyFlag | bool | – | `true` = foreign-currency account |
+| currencyCode | int | ✅ if `currencyFlag` | Existing currency id |
+| currencyConversionRate | decimal | ✅ if `currencyFlag` | > 0 |
+| active | bool | – | Default `true` (note: **`active`**, not `isActive`) |
+| rowVersion | string (base64) | ✅ on PUT only | Copy the value from the latest GET; send it back unchanged |
+
+**Response fields (list / get):** `id`, `accName`, `accountCode` (also `acCode`), `alias`, `secName`, `printName`, `ledgerGroupId`, `address`, `phone`, `active`, `openBal`, `depreciation`, `vatFlag`, `vatPerc`, `taxRetFlag`, `bankAccName`, `bankAccNo`, `ibanNo`, `swiftCode`, `branch`, `curFlg`, `curCode`, `curConvRate`, `rowVersion`.
+> Response names differ from request names (e.g. `accName` vs `accountName`, `openBal` vs `openingBalance`).
+
+```json
+// POST /api/v1/accounts
+{ "accountName": "Cash In Hand", "groupId": 12, "openingBalance": 5000, "openingBalanceType": "DR", "active": true }
+```
+```json
+// GET /api/v1/accounts/7/opening → data
+{ "accountId": 7, "openingBalance": 5000 }
+```
+
+**Behaviour / errors**
+- `"Account name already exists."`, `"Ledger group not found."`, `"Currency not found."`, `"Account code already exists."`.
+- PUT with a stale `rowVersion` → `"Account was modified by another user. Please refresh and try again."` (reload, then retry). Missing → `"A valid row version is required for updating the account."`.
+- `GET /{id}/opening` returns `"Account not found."` when the opening balance is 0 (known quirk — treat as "no balance").
+- `GET /group/{groupId}` returns `"Account not found."` when the group has no accounts.
+- Delete is a soft delete.
+
+---
+
+## 04. Countries — `/api/v1/countries`
+
+Standard master CRUD.
+
+**List:** `?page=1&pageSize=20&search=` — `search` matches country name. `pageSize` 1–100. Sorted by name. No `active` filter.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Notes |
+|---|---|---|---|
+| countryName | string(100) | ✅ | 2–100 chars, unique |
+| countrySecName | string(250) | – | Second-language name |
+| formalName | string(250) | – | |
+| iso / iso3 | string(10) | – | ISO 2/3-letter codes |
+| numCode | int | – | ≥ 0, ISO numeric code |
+| phCode | int | – | ≥ 0, dial code |
+| curName / curSymbol | string(250) | – | Currency name / symbol |
+| vat | bool | – | Country uses VAT |
+| vatPer | decimal | – | ≥ 0, default VAT % |
+| vatLabel | string(250) | – | e.g. "VAT", "GST" |
+| vatNoLimit | int | – | ≥ 0, max digits of a VAT number |
+| vatCharAllow | bool | – | Allow letters in VAT number |
+| lng | string(250) | – | Language |
+| farabic / sarabic / tarabic | string(250) | – | Arabic names (1st/2nd/3rd) |
+
+**Response fields:** `id`, `active` plus all of the above (except `vatCharAllow`).
+
+```json
+// POST /api/v1/countries
+{ "countryName": "United Arab Emirates", "iso": "AE", "iso3": "ARE", "phCode": 971,
+  "curName": "Dirham", "curSymbol": "AED", "vat": true, "vatPer": 5, "vatLabel": "VAT" }
+```
+Errors: `"Country name already exists."`, `"Country not found."`.
+
+---
+
+## 05. Currencies — `/api/v1/currencies`
+
+Standard master CRUD.
+
+**List:** `?page=1&pageSize=10&search=&excludeBase=true` — `search` matches symbol and currency names. `pageSize` 1–500 (default **10**). `excludeBase=true` hides the base currency (use it for "alternate currency" dropdowns). No `active` filter. Sorted by id.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| symbol | string(50) | ✅ | Unique (e.g. `AED`) |
+| currString | string(50) | ✅ | Currency name, e.g. "Dirham" |
+| subString | string(50) | – | Sub-unit name, e.g. "Fils" |
+| convMode | int | – | Conversion mode code |
+| baseFlg | bool | – | Marks the base currency |
+| secSymbol / secCurrString / secSubString | string(50) | – | Second-language versions |
+
+**Response fields:** `id`, `symbol`, `currString`, `subString`, `convMode`, `baseFlg`, `secSymbol`, `secCurrString`, `secSubString`.
+
+```json
+// POST /api/v1/currencies
+{ "symbol": "USD", "currString": "US Dollar", "subString": "Cent", "baseFlg": false }
+```
+Errors: `"Currency symbol already exists."`, `"Base currency cannot be deleted."`. Delete is a soft delete.
+
+---
+
+## 06. Currency Conversions — `/api/v1/currency-conversions`
+
+Exchange rates against the **base currency**, entered **per date**: one conversion = one date + a rate row for each alternate currency.
+
+**List:** `?page=1&pageSize=10&search=` — one row per date/currency, newest date first. `pageSize` 1–500.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| conversionDate | datetime | ✅ | One conversion per date |
+| details | array | ✅ | At least 1 |
+
+**details[]**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| currencyId | int | ✅ | Alternate currency id (**not** the base currency); no duplicates |
+| standardRate | decimal | ✅ | > 0 |
+| sellRate | decimal | ✅ | > 0 |
+| buyRate | decimal | ✅ | > 0 |
+
+**Response (list / get) row:** `id`, `baseCurrencyId`, `alternateCurrencyId`, `symbol`, `conversionDate`, `standardRate`, `sellRate`, `buyRate`.
+
+```json
+// POST /api/v1/currency-conversions
+{ "conversionDate": "2026-11-23",
+  "details": [ { "currencyId": 2, "standardRate": 3.6725, "sellRate": 3.68, "buyRate": 3.67 } ] }
+```
+
+**Behaviour**
+- `PUT /{id}` and `DELETE /{id}`: `{id}` identifies any row of the date; **the whole date's rates are replaced / deleted**, so send all details on PUT.
+- Errors: `"Currency conversion already exists for this date."`, `"Duplicate alternate currency is not allowed."`, `"Base currency cannot be selected as an alternate currency."`, `"Standard rate, sell rate and buy rate must be greater than zero."`, `"Base currency is not configured."`.
+
+---
+
+## 07. Lookups — `/api/v1`
+
+Static dropdown lists (no parameters).
+
+| Method | Endpoint | `data` |
+|---|---|---|
+| GET | `/vat-types` | `[{ "id": "Standard VAT", "name": "Standard VAT" }, ...]` — Standard, Multi-rate, Zero-rated, Reverse-charge, Differential, Destination-based, Small Business VAT |
+| GET | `/einvoice-id-types` | `["CRN","MOM","MLS","700","SAG","OTH","NAT","IQA","PAS","GCC"]` |
+
+---
+
+## 08. Regions — `/api/v1/regions`
+
+States / regions of a country. **No DELETE endpoint.**
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/?countryId=1` | Paged list for a country |
+| GET | `/{regionId}` | Single region |
+| POST | `/` | Create |
+| PUT | `/{regionId}` | Update |
+
+**List query:** `countryId` (**required**, > 0), `page`, `pageSize` (1–200, default 10), `search` (matches regionName, regionSecName). Sorted by name.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| countryId | int | ✅ | Existing country |
+| regionName | string(50) | ✅ | Unique within the country |
+| regionSecName | string(50) | – | Second-language name |
+| isActive | bool | – | Defaults to `false` if omitted — send `true` explicitly |
+
+**Response fields:** `countryId`, `regionId`, `regionName`, `regionSecName`.
+
+```json
+// POST /api/v1/regions
+{ "countryId": 1, "regionName": "Dubai", "isActive": true }
+```
+Errors: `"Region name already exists for the specified country."`, `"Invalid country ID."`, `"Region not found."`.
+
+---
+
+## 09. Customers — `/api/v1/customers`
+
+Creating a customer also creates its **ledger account** (code like `C<group>-<nn>`), optionally with an opening balance and pending (outstanding) bills.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/` | Paged list |
+| GET | `/{id}` | Customer with `pendingBills` and `rowVersion` |
+| POST | `/` | Create customer + account |
+| PUT | `/{id}` | Update (**needs `rowVersion`**) |
+| DELETE | `/{id}` | Delete |
+| GET | `/lookups/ledger-groups` | Dropdown `[{ id, name }]` of customer ledger groups |
+| GET | `/lookups/salesman` | Dropdown `[{ id, name }]` of active salesmen |
+
+Other dropdowns come from shared endpoints: `/countries`, `/regions?countryId=`, `/currencies`, `/party-groups?groupType=Customer`, `/vat-types`, `/einvoice-id-types`.
+
+**List:** `?page=1&pageSize=10&search=&active=true` — `search` matches name, alias, printName, phone, email. Default `pageSize` is **10**. Sorted by name. Envelope: `{ "status": true, "data": [...], "pagination": {...} }` (no `message`).
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| cusName | string(100) | ✅ | Unique |
+| crDr | string | ✅ | `"DR"` or `"CR"` (default `CR`) — side of the opening balance |
+| alias | string(25) | – | |
+| secName | string(100) | – | Second-language name |
+| printName | string(100) | – | |
+| address | string(250) | – | |
+| shipAddress | string(250) | – | |
+| phone | string(25) | – | Valid phone format |
+| email | string(100) | – | Valid email |
+| active | bool | – | Default `true` (**`active`**, not `isActive`) |
+| ledgerGroupId | int | – | ≥ 1; defaults to the standard customer group. Must be a customer ledger group |
+| partyGrpId | int | – | 0–100000; 0 = none. Must be a **Customer** party group |
+| salesMan | int | – | ≥ 1, active salesman id |
+| countryCode | int | – | Active country id |
+| stateCode | int | – | Region id; must belong to `countryCode` |
+| vatFlag | bool | – | Customer is VAT registered |
+| vatRegNo | string | – | **Exactly 15 digits** if provided |
+| vatType | string(25) | – | From `/vat-types` |
+| grpVatNo | string(25) | – | |
+| einvIdType | string(25) | – | From `/einvoice-id-types` |
+| einvId | string(50) | – | |
+| gccFlg | bool | – | GCC customer |
+| crLimitFlag | bool | – | Enable credit limit |
+| crLimit | decimal | – | 0–1,000,000 |
+| crPerFlag | bool | – | Enable credit period |
+| crPeriod | int | – | 0–100 (days) |
+| billFlag | bool | – | Bill-wise tracking |
+| curFlg | bool | – | Foreign-currency customer |
+| curCode | int | – | 0–100000; 0 = base currency. Must exist |
+| curConvRate | decimal | – | 0.000001–100, default 1 |
+| openBal | decimal | – | 0–1,000,000 |
+| bnkAccName, bnkAccNo, branch, ibanNo, swiftCode | string | – | Bank details (IBAN ≤ 34) |
+| streetOne, streetTwo, buildingNo, plotId, cityName, postalCode, district | string | – | Address parts |
+| pendingBills | array | – | See below |
+| rowVersion | string (base64) | ✅ on PUT only | From the latest GET, sent back unchanged |
+
+**pendingBills[]** (only meaningful with an opening balance)
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| id | int | – | Existing bill id on PUT; omit/`0` for a new bill |
+| invoiceNumber | string(50) | ✅ | Unique within the request |
+| invoiceDate | datetime | ✅ | |
+| dueDate | datetime | ✅ | |
+| amount | decimal | ✅ | 0–1,000,000 |
+| drCr | string | ✅ | `"DR"` / `"CR"` |
+| narration | string(250) | – | |
+
+**Rule:** the sum of pending bills with the same `drCr` as `crDr` must not exceed `openBal`.
+
+**Response fields (list / get):** all request fields (with `id`, `accountId`, `accountCode`, `ledgerGroupId`, `salesManId`, `disc`, `priceLevel`, `rowVersion`, …); get-by-id also returns `pendingBills[]` (`id`, `invoiceNumber`, `invoiceDate`, `dueDate`, `amount`, `drCr`, `narration`, `currencyCode`, `conversionRate`, `branchId`).
+
+```json
+// POST /api/v1/customers
+{ "cusName": "Al Noor Trading", "phone": "+971501234567", "email": "info@alnoor.ae",
+  "countryCode": 1, "stateCode": 4, "vatFlag": true, "vatRegNo": "300000000000003",
+  "crLimitFlag": true, "crLimit": 50000, "crPeriod": 30,
+  "openBal": 1000, "crDr": "DR",
+  "pendingBills": [ { "invoiceNumber": "INV-001", "invoiceDate": "2026-10-01", "dueDate": "2026-10-31", "amount": 1000, "drCr": "DR" } ] }
+```
+```json
+// 200
+{ "status": true, "message": "Customer and account created successfully." }
+```
+
+**Errors**
+- **HTTP 409** (not 400): `"Customer name already exists."`, `"This customer was modified by another user. Reload the latest customer data before saving again."`.
+- 400: `"Selected customer ledger group does not exist or is inactive."`, `"Selected currency does not exist."`, `"Selected party group does not exist or is not a customer group."`, `"Selected country does not exist or is inactive."`, `"Selected region does not exist, is inactive, or does not belong to the selected country."`, `"Selected salesman does not exist or is inactive."`, `"Total pending bills (…) cannot exceed the opening balance (…) for direction DR."`, `"A valid RowVersion is required. Reload the customer and try again."`, `"Customer not found."`.
+- Field-rule violations (length, format, ranges above) return 400 `{ "status": false, "message": "<all messages joined by a space>" }`.
+
+---
+
+## 10. Suppliers — `/api/v1/suppliers`
+
+Works like Customers (creating a supplier also creates its ledger account), with a few differences noted below.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/` | Paged list |
+| GET | `/{id}` | Supplier with pending bills and `rowVersion` |
+| POST | `/` | Create supplier + account (uses the default supplier ledger group) |
+| PUT | `/{id}` | Update (**needs `rowVersion`**) |
+| DELETE | `/{id}` | Delete (validated) |
+| GET | `/lookups/ledger-groups` | Dropdown of supplier ledger groups |
+
+Other dropdowns: `/countries`, `/regions?countryId=`, `/currencies`, `/party-groups?groupType=Supplier`, `/vat-types`, `/einvoice-id-types`.
+
+**List:** `?page=1&pageSize=10&search=&active=true` — `search` matches name, alias, printName, phone, email. `pageSize` 1–500 (default **10**; `page` ≥ 1, otherwise 400).
+
+**Request body (POST / PUT)** — same fields and rules as Customers (section 09), except:
+
+| Difference | Supplier |
+|---|---|
+| Name field | `supName` (**required**, max **50**) instead of `cusName` |
+| `salesMan`, `ledgerGroupId` | `ledgerGroupId` accepted; no salesman field |
+| `crDr` | `"CR"` / `"DR"` (default `Cr`), case-insensitive |
+| `curCode` | 0–100 |
+| `pendingBills` | **Required on PUT** — send `[]` when there are none |
+| `rowVersion` | Required on PUT |
+
+`pendingBills[]` fields are identical to Customers (`id`, `invoiceNumber`, `invoiceDate`, `dueDate`, `amount`, `drCr`, `narration`).
+
+**Pending-bill rules (stricter than customers)**
+- `amount` must be **> 0**; `dueDate` cannot be earlier than `invoiceDate`.
+- Total pending **debit** bills ≤ opening debit balance; total pending **credit** bills ≤ opening credit balance.
+
+```json
+// POST /api/v1/suppliers
+{ "supName": "Gulf Traders", "phone": "+971501234567", "countryCode": 1, "vatFlag": true,
+  "vatRegNo": "300000000000003", "openBal": 2500, "crDr": "CR",
+  "pendingBills": [ { "invoiceNumber": "PI-77", "invoiceDate": "2026-10-05", "dueDate": "2026-11-05", "amount": 2500, "drCr": "CR" } ] }
+```
+```json
+// 200
+{ "status": true, "message": "Supplier and account created successfully." }
+```
+
+**Errors** (all HTTP 400 unless noted)
+- `"Supplier name already exists."`, `"Supplier not found."`, `"Invalid supplier ID."`.
+- Update: `"A valid RowVersion is required. Reload the supplier and try again."`, `"Supplier was modified by another user. Reload and try again."`, `"PendingBills is required. Send [] when there are no pending bills."`.
+- Financial: `"Opening balance cannot be negative."`, `"Opening balance type must be DR or CR."`, `"A valid currency is required when multicurrency is enabled."`, `"Currency conversion rate must be greater than zero."`, `"Due date cannot be earlier than invoice date for pending bill N."`, `"Total pending debit bills cannot exceed the opening debit balance."`.
+- Delete: `"Supplier cannot be deleted."` or a specific reason (the supplier's account is already used in purchases, sales, vouchers, pending bills, etc.) — show `message` to the user.
+
+---
+
+## 11. Item Groups — `/api/v1/item-group`
+
+Standard master CRUD + one lookup.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/primary-groups` | Active primary groups for the "parent group" dropdown (not paged) |
+
+**List:** `?page=1&pageSize=20&search=&active=true` — `search` matches groupName and groupCode. `active` (bool) is optional; omit for all. Newest first.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| groupName | string(50) | ✅ | 2–50 chars, unique |
+| groupCode | int | ✅ | > 0, unique |
+| isPrimaryGroup | bool | – | `true` = top-level group (no parent). Default `false` |
+| primaryGroupId | int | ✅ if `isPrimaryGroup=false` | Must be an active primary group. Cannot be the group itself |
+| tagWithAccount | bool | – | `true` = link ledger accounts |
+| stockAccountId | int | ✅ if `tagWithAccount` | Active ledger account id |
+| purchaseAccountId | int | ✅ if `tagWithAccount` | Active ledger account id |
+| salesAccountId | int | ✅ if `tagWithAccount` | Active ledger account id |
+| isActive | bool | – | Default `true` |
+| secName | string(250) | – | Second-language name |
+
+**Response fields:** all request fields plus `id`, `updateTime`; account/parent ids are `0` when not set.
+
+```json
+// POST /api/v1/item-group
+{ "groupName": "Electronics", "groupCode": 10, "isPrimaryGroup": true,
+  "tagWithAccount": true, "stockAccountId": 5, "purchaseAccountId": 6, "salesAccountId": 7 }
+```
+```json
+// GET /api/v1/item-group/primary-groups → data (array of the same response object)
+[ { "id": 3, "groupName": "Electronics", "groupCode": 10, "isPrimaryGroup": true, "isActive": true } ]
+```
+
+Errors: `"Item group name already exists."`, `"Item group code already exists."`, `"Please select a primary group."`, `"Selected group is not a primary group."`, `"Selected primary group is not active."`, `"Stock account not found."` (same for purchase/sales). Delete is a soft delete.
+
+---
+
+## 12. Item Categories — `/api/v1/item-categories`
+
+Standard master CRUD.
+
+**List:** `?page=1&pageSize=20&search=&active=true` — `search` matches categoryName, alias, secondName and id. `active` optional. Newest first.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| categoryName | string(100) | ✅ | Unique |
+| alias | string(100) | – | |
+| secondName | string(100) | – | Second-language name |
+| isActive | bool | – | Default `true` |
+
+**Response fields:** `id`, `categoryName`, `alias`, `secondName`, `isActive`.
+
+```json
+// POST /api/v1/item-categories
+{ "categoryName": "Mobile Phones", "alias": "MOB", "isActive": true }
+```
+
+Errors: `"Category name already exists."`, `"Category not found."`, `"Item category is already deleted."`. Delete is a soft delete.
+
+---
+
+## 13. Item Brand — `/api/v1/brands`
+
+Standard master CRUD.
+
+**List:** `?page=1&pageSize=20&search=sony` — `search` matches brandName, secondName and alias (partial). Sorted by brandName. There is **no** `active` filter on this module.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| brandName | string(50) | ✅ | 2–50 chars, unique |
+| secondName | string(100) | – | Local-language name; unique if provided |
+| alias | string(25) | – | Short code; unique if provided |
+
+**Response fields:** `id` (int), `brandName`, `secondName`, `alias`.
+
+**Behaviour**
+- Duplicate errors: `"Brand name already exists."`, `"Second name already exists."`, `"Alias already exists."` (the record being edited is ignored on PUT).
+- `"Brand not found."` on GET/PUT/DELETE with an unknown id.
+- Delete is a soft delete; deleted brands no longer appear in lists.
+
+```json
+// POST /api/v1/brands
+{ "brandName": "Sony", "secondName": "سوني", "alias": "SNY" }
+```
+```json
+// GET /api/v1/brands?search=son  → 200
+{ "status": true, "message": "Brands retrieved successfully.",
+  "data": [ { "id": 1, "brandName": "Sony", "secondName": "سوني", "alias": "SNY" } ],
+  "pagination": { "page": 1, "pageSize": 20, "totalRecords": 1, "totalPages": 1 } }
+```
+
+---
+
+## 14. Unit Of Measure — `/api/v1/units`
+
+Standard master CRUD.
+
+**List:** `?page=1&pageSize=20&search=kg&active=true` — `search` matches unitName, secondName, formalName and id. `active` optional. Sorted by unitName.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| unitName | string(25) | ✅ | Unique among active units |
+| secondName | string(25) | – | Second-language name |
+| formalName | string(25) | – | Formal / standard abbreviation |
+| isActive | bool | – | Default `true` |
+
+**Response fields:** `id`, `unitName`, `secondName`, `formalName`, `isActive`.
+
+```json
+// POST /api/v1/units
+{ "unitName": "Kilogram", "formalName": "KG", "isActive": true }
+```
+
+Errors: `"Unit name already exists."`, `"Unit not found."`. Delete is a soft delete (the unit is also deactivated).
+Note: the max length is 25 even though some error text says 50.
+
+---
+
+## 15. Tax — `/api/v1/taxes`
+
+Standard master CRUD.
+
+**List:** `?page=1&pageSize=20&search=vat&active=true` — `search` matches taxName, secondName, taxType, code and percentage. `active` optional. Sorted by taxName.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| taxName | string(100) | ✅ | Unique |
+| taxPercentage | decimal | ✅ | 0–100 |
+| salesAccountId | int | ✅ | Existing ledger account id (> 0) |
+| salesReturnAccountId | int | ✅ | Ledger account id |
+| purchaseAccountId | int | ✅ | Ledger account id |
+| purchaseReturnAccountId | int | ✅ | Ledger account id |
+| vatAccountId | int | ✅ | Output VAT ledger (used on sales) |
+| taxAccountId | int | ✅ | Input tax ledger (used on purchases) |
+| taxType | string(10) | – | `T` Taxable (default), `E` Exempted, `UR` Unregistered |
+| secondName | string(100) | – | Second-language name |
+| isActive | bool | – | Default `true` |
+
+**Response fields:** `id`, `taxName`, `taxPercentage`, `isActive`, plus the six account ids, `taxType`, `secondName`.
+
+```json
+// POST /api/v1/taxes
+{ "taxName": "VAT 5%", "taxPercentage": 5, "taxType": "T",
+  "salesAccountId": 11, "salesReturnAccountId": 12, "purchaseAccountId": 13,
+  "purchaseReturnAccountId": 14, "vatAccountId": 15, "taxAccountId": 16 }
+```
+
+Errors: `"Tax name already exists."`, `"Sales account does not exist."` (same pattern for purchase, sales return, purchase return), `"VAT (Sales) account does not exist."`, `"Tax(Purchase) account does not exist."`. Delete is a soft delete.
+
+---
+
+## 16. Price Categories — `/api/v1/price-categories`
+
+A price category has a name and one or more **levels** (quantity bands with a discount rule). Standard CRUD; update **replaces all levels**, so always send the full list.
+
+**List:** `?page=1&pageSize=20&search=` — searches the category name. There is no `active` filter. Sorted by name.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| categoryName | string(25) | ✅ | 2–25 chars, unique |
+| levels | array | ✅ | At least 1 |
+
+**Level object**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| discountStructure | string | ✅ | Exactly one of `"Discount Based on %"`, `"Absolute Value"`, `"Direct Price"` |
+| levelFrom | decimal | ✅ | > 0, ≤ levelTo (max 100000) |
+| levelTo | decimal | ✅ | > 0 (max 100000) |
+| discountPercent | decimal | – | 0–100. Used when structure = `Discount Based on %` |
+| effectiveValue | decimal | – | ≥ 0. Used when structure = `Absolute Value` |
+| appliedPrice | decimal | – | ≥ 0. Used when structure = `Direct Price` |
+
+**Response:** `id`, `categoryName`, `levels[]` (each with `id`, `categoryName`, `discountStructure`, `levelFrom`, `levelTo`, `discountPercent`, `effectiveValue`, `appliedPrice`).
+
+```json
+// POST /api/v1/price-categories
+{ "categoryName": "Wholesale",
+  "levels": [
+    { "discountStructure": "Discount Based on %", "levelFrom": 1, "levelTo": 10, "discountPercent": 5 },
+    { "discountStructure": "Direct Price", "levelFrom": 11, "levelTo": 100, "appliedPrice": 95.5 } ] }
+```
+
+Errors: `"Price category already exists."`, `"Invalid discount structure. Sample values: ..."`, `"Level From cannot be greater than Level To."`, `"Price category not found."`. Delete is a soft delete.
+
+---
+
+## 17. Products — `/api/v1/products`
+
+> ⚠️ **There is no plain JSON `POST /products`.** New products are created with **`POST /products/with-image`** (multipart form, image optional).
+
+| Method | Endpoint | Content-Type | Purpose |
+|---|---|---|---|
+| GET | `/` | – | Paged list |
+| GET | `/{id}` | – | Product with aliases & price categories |
+| POST | `/with-image` | multipart/form-data | **Create** (image optional) |
+| PUT | `/{id}` | application/json | Update fields only |
+| PUT | `/{id}/with-image` | multipart/form-data | Update fields (+ optionally replace image) |
+| DELETE | `/{id}` | – | Delete |
+| POST | `/image` | multipart/form-data | Add image (`productId`, `imageFile`) — fails if one already exists |
+| PUT | `/image` | multipart/form-data | Replace image (`productId`, `imageFile`) — fails if none exists |
+| GET | `/{id}/image` | – | Returns the **binary image** (`image/jpeg` or `image/png`), not JSON; errors come back as JSON 400 |
+| DELETE | `/{id}/image` | – | Remove image |
+
+**List:** `?page=1&pageSize=20&search=&groupId=&active=true` — `search` matches name, alias, barcode, UPC, SKU and code; `groupId` filters by item group; `active` optional. Sorted by name. `pageSize` max 100.
+
+**Multipart form (`with-image` endpoints)**
+
+| Form field | Type | Req | Notes |
+|---|---|---|---|
+| product | string | ✅ | The product object below as **JSON text** |
+| imageFile | file | – | JPG / JPEG / PNG only; whole request ≤ **5 MB** |
+
+```js
+const fd = new FormData();
+fd.append("product", JSON.stringify({ prName: "Pepsi 330ml", groupId: 3, unit: 1, taxCatId: 2 }));
+fd.append("imageFile", file);               // optional
+await fetch("/api/v1/products/with-image", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd });
+```
+Do **not** set `Content-Type` manually (the browser adds the boundary). Rule violations in the JSON return 400 with all messages joined, or `"Invalid product data."` if the JSON is malformed.
+
+**Product object (request)** — only the important fields; all others are optional numbers/strings/bools as typed
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| prName | string(50) | ✅ | Unique; must not contain `&` or `@` |
+| groupId | int | ✅ | Item group id (≥ 1) |
+| unit | int | ✅ | Main unit id (≥ 1) |
+| taxCatId | int | ✅ | Tax id (≥ 1) |
+| alias | string(50) | – | Unique; must not repeat in `aliases` |
+| printName | string(25) | – | |
+| desc | string(100) | – | Description |
+| secName | string(150) | – | Second-language name |
+| notes | string | – | |
+| barCode / upcCode / skuCode | string(150) | – | Barcode must be unique |
+| catgId, brandId | int | – | Item category / brand id (≥ 1) |
+| altUnit | int | – | Must differ from `unit` |
+| unitConv | decimal | – | > 0; how many `altUnit` per `unit` (or per `convType`) |
+| convType | int | – | Conversion type code |
+| purPriceType / salesPriceType | int | – | Price type codes |
+| basePurPrice, altPurPrice | decimal | – | 0–100000 |
+| baseSalePrice, baseMinPrice, altSalePrice, altMinPrice | decimal | – | 0–100000 |
+| baseMrp, altMrp | decimal | – | 0–100000 |
+| costMeth | int | – | Costing method code |
+| saleAccId, purAcctId | int | – | Ledger account ids (≥ 1) |
+| supplierId | int | – | Default supplier id |
+| minQty, reOrdQty, maxQty | decimal | – | 0–100000 |
+| servFlg | bool | – | Service item (no stock) |
+| batchFlg | bool | – | Batch tracking |
+| slNoTrack | bool | – | Serial-number tracking — sent as **`_SLNOTRACK`**. Cannot be on together with `batchFlg` |
+| manDateFlg, expDateFlg | bool | – | Track manufacture / expiry dates |
+| expDays | int | – | 0–100000 |
+| priceCatFlg | bool / priceCatId int | – | Use a price category |
+| posFlg | bool | – | Show in POS |
+| active | bool | – | |
+| opnStkQty | decimal | – | Opening stock quantity (0–100000) |
+| opnStkValue | decimal | ✅ if `opnStkQty` > 0 | Opening stock value (0–10,000,000) |
+| opnStkRate | decimal | – | Opening rate |
+| gdwnId | int | – | Godown/location for opening stock |
+| currencyId, curConvRate | int / decimal | – | Foreign-currency product |
+| `_BMPL`, `_BMPQ`, `_BMPW`, `_BMEQN` | decimal / string | – | Bill-of-measure fields — note the **leading underscore in the JSON name** |
+| aliases | array | – | Extra names / pack sizes (below) |
+| rowVersion | string (base64) | PUT only | From the latest GET; send back unchanged |
+
+**aliases[]:** `id` (int, `0` for new), `alName` (string(50)), `alCode` (string(25)), `qty` (decimal), `unitId` (int), `salesPrice`, `purPrice` (decimal), `alType` (int), `invUnitCode` (int), `active` (bool). Alias names must be unique within the product.
+
+**Response (GET)** — mostly the same names, with these differences: `description` (request `desc`), `categoryId` (`catgId`), `brandId` (string), `saleAcId` / `purAcId` (`saleAccId` / `purAcctId`), `prNotes` (`notes`), `opnStock` / `opnStkval` (opening qty/value), `slNoTrack`, `bmpl/bmpq/bmpw/bmEqn` (no underscore), `rowVersion`, `image` (string), `aliases[]` and `priceCategories[]` (`id`, `categoryId`, `catName`, `discStruct`, `levFrom`, `levTo`, `discPerc`, `effValue`, `appPrice`).
+
+```json
+// product JSON (create)
+{ "prName": "Pepsi 330ml", "alias": "PEP330", "barCode": "6291003000012",
+  "groupId": 3, "unit": 1, "taxCatId": 2, "basePurPrice": 1.2, "baseSalePrice": 2,
+  "opnStkQty": 100, "opnStkValue": 120, "active": true,
+  "aliases": [ { "alName": "Pepsi Box", "qty": 24, "unitId": 3, "salesPrice": 45 } ] }
+```
+```json
+// 200
+{ "status": true, "message": "Product created successfully." }
+```
+
+**Errors:** `"Product name already exists."`, `"Product alias already exists."`, `"Product barcode already exists."`, `"Please select a product group."`, `"Please select a tax category."`, `"Alternate unit cannot be the same as the main unit."`, `"Opening stock value is required."`, `"Batch tracking and serial number tracking cannot both be enabled."`, `"Duplicate product aliases are not allowed."`, `"Invalid product group."` / `"Invalid brand."` / `"Invalid main unit."` … (an id does not exist), `"Product was modified or could not be updated. Please refresh and try again."`, `"Product is already used and cannot be deleted."`, `"Product image already exists. Use update to replace it."`, `"Only JPG, JPEG and PNG images are allowed."`.
+
+---
+
+## 18. Unit Conversions — `/api/v1/unit-conversions`
+
+Defines how one unit converts to another (e.g. 1 Box = 12 Pcs). Standard master CRUD.
+
+**List:** `?page=1&pageSize=20&search=` — `search` matches the unit names. `pageSize` max 100 (≥ 1, otherwise 400). No `active` filter.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| mainUnit | int | ✅ | Unit id (> 0). Must exist (the larger unit, e.g. Box) |
+| subUnit | int | ✅ | Unit id (> 0). Must exist (the smaller unit, e.g. Pcs) |
+| convFact | decimal | ✅ | > 0. How many `subUnit` make one `mainUnit` |
+
+**Response fields:** `id`, `mainUnit`, `subUnit`, `convFact`, `mainUnitName`, `subUnitName`.
+
+```json
+// POST /api/v1/unit-conversions
+{ "mainUnit": 3, "subUnit": 1, "convFact": 12 }
+```
+Errors: `"Main unit does not exist."`, `"Sub unit does not exist."`, `"Unit conversion not found."`. Delete is a soft delete.
+
+---
+
+## 19. Bill Of Material (BOM) — `/api/v1/boms`
+
+A BOM describes how a finished product is made: output product + quantity, input items, and extra costs.
+
+**List:** `?page=1&pageSize=20&search=&active=true` — `search` matches bomName, alias and id. `pageSize` max 100. Newest first. Each list row has the **same full shape as GET-by-id** (below).
+
+**Request body (POST / PUT)** — PUT replaces items and additional info, so always send the full lists.
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| bomName | string(100) | ✅ | 2–100 chars, unique |
+| alias | string(25) | – | Unique if provided |
+| prCode | int | ✅ | Finished product id (≥ 1) |
+| qty | decimal | ✅ | Output quantity, > 0 |
+| unit | int | ✅ | Unit id (≥ 1) |
+| expences | decimal | – | ≥ 0. Extra expense total *(spelling is `expences`)* |
+| mcGenFlg | string | – | `"Y"` / `"N"` — machine generation |
+| mcGen | int | ✅ if `mcGenFlg="Y"` | Account id (≥ 1) |
+| mcConsFlg | string | – | `"Y"` / `"N"` — machine consumption |
+| mcCons | int | ✅ if `mcConsFlg="Y"` | Account id (≥ 1) |
+| secondName | string(250) | – | |
+| items | array | ✅ | At least 1 |
+| additionalInfo | array | – | May be empty, not `null` |
+
+**items[]**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| productId | int | ✅ | Existing product id |
+| quantity | decimal | ✅ | > 0 |
+| unitId | int | ✅ | Unit id (≥ 1) |
+| type | string | ✅ | `"C"` (default) or `"G"` |
+
+**additionalInfo[]** (other costs posted to ledger accounts)
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| accountId | int | ✅ | Existing ledger account id |
+| amount | decimal | ✅ | ≥ 0 |
+
+**GET response `data`** (for both list rows and by-id)
+```json
+{ "bilofm_details": { "id": 5, "bomName": "Chair", "alias": "CH1", "prCode": 15, "productName": "Wooden Chair",
+                      "qty": 1, "unit": 1, "unitName": "Pcs", "expences": 10, "mcGenFlg": false, "mcGen": null,
+                      "mcConsFlg": false, "mcCons": null, "secondName": null },
+  "items": [ { "id": 1, "prCode": 20, "prName": "Wood", "qty": 4, "unit": 1, "type": "C", "price": 25 } ],
+  "additionalInfo": [ { "id": 1, "accountId": 40, "amount": 10 } ] }
+```
+> ⚠️ Note: the master block key is literally `bilofm_details`, and flags come back as booleans while they are sent as `"Y"`/`"N"`.
+
+```json
+// POST /api/v1/boms
+{ "bomName": "Chair", "alias": "CH1", "prCode": 15, "qty": 1, "unit": 1, "expences": 10,
+  "mcGenFlg": "N", "mcConsFlg": "N",
+  "items": [ { "productId": 20, "quantity": 4, "unitId": 1, "type": "C" } ],
+  "additionalInfo": [ { "accountId": 40, "amount": 10 } ] }
+```
+Errors: `"Bill of materials name already exists."`, `"Bill of materials alias already exists."`, `"Invalid product ID in BOM items."`, `"Invalid account ID in BOM additional information."`, `"At least one BOM item is required."`, `"Machine generation account is required."`.
+
+---
+
+## 20. Location Groups (Godown Groups) — `/api/v1/location-groups`
+
+Standard master CRUD.
+
+**List:** `?page=1&pageSize=20&search=&active=true` — `search` matches groupName, secondName and id. `active` optional. Newest first.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| groupName | string(20) | ✅ | 2–20 chars |
+| secondName | string(20) | – | Second-language name |
+| isActive | bool | – | Default `true` |
+
+**Response fields:** `id`, `groupName`, `secondName`, `isActive`.
+
+```json
+// POST /api/v1/location-groups
+{ "groupName": "Main Stores", "isActive": true }
+```
+Delete is a soft delete.
+
+---
+
+## 21. Locations (Godowns) — `/api/v1/locations`
+
+Standard master CRUD.
+
+**List:** `?page=1&pageSize=20&search=&active=true` — `search` matches locationName, secondName, id, groupId and stockAccountId. `active` optional. Newest first.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| locationName | string(25) | ✅ | 2–25 chars |
+| groupId | int | ✅ | Location-group id (1–100000) — fill the dropdown from `GET /location-groups?active=true` |
+| stockAccountId | int | ✅ | Stock ledger account id (1–100000) |
+| stockPLFlag | bool | – | Include this location's stock in P&L. Default `false` |
+| secondName | string(25) | – | Second-language name |
+| isActive | bool | – | Default `true` |
+
+**Response fields:** `id`, `locationName`, `groupId`, `isActive`, `stockAccountId`, `stockPLFlag`, `secondName`.
+
+```json
+// POST /api/v1/locations
+{ "locationName": "Warehouse 1", "groupId": 2, "stockAccountId": 8, "stockPLFlag": true }
+```
+
+---
+
+## 22. Party Groups — `/api/v1/party-groups`
+
+Groups for customers **or** suppliers. There is **no** GET-by-id.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/?groupType=Customer` | Paged list |
+| POST | `/` | Create |
+| PUT | `/{id}` | Update |
+| DELETE | `/{id}` | Delete |
+
+**List query:** `groupType` (**required**: `Customer` or `Supplier`), `page`, `pageSize` (1–100, otherwise 400), `search` (matches name). No `active` filter. Sorted by name.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| groupName | string(20) | ✅ | Unique within the group type |
+| groupShortName | string(20) | – | |
+| groupType | string | ✅ | `"Customer"` or `"Supplier"` (case-sensitive) |
+
+**List item:** `{ "id": 1, "name": "Retail" }`
+
+```json
+// POST /api/v1/party-groups
+{ "groupName": "Retail", "groupShortName": "RTL", "groupType": "Customer" }
+```
+Errors: `"Group name already exists."`, `"Another group already uses this name."`, `"Party group not found."`, `"Unable to delete party group. It may be in use."`.
+
+---
+
+## 23. Salesman Group — `/api/v1/salesman-groups`
+
+Standard master CRUD + lookup.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/lookup` | Dropdown list *(declared in code but currently commented out — do not rely on it; use the list endpoint with `active=true`)* |
+
+**List:** `?page=1&pageSize=20&search=&active=true`.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| groupName | string | ✅ | Not blank, unique |
+| secondName | string | – | |
+| printName | string | – | |
+| isActive | bool | – | Default `true` |
+
+**Response fields:** `id`, `groupName`, `secondName`, `printName`, `isActive`, `logCode`, `updateTime`.
+
+```json
+// POST /api/v1/salesman-groups
+{ "groupName": "North Zone", "printName": "North" }
+```
+Errors: `"Group name already exists."`, `"Cannot delete salesman group because it is assigned to one or more salesmen."`.
+
+---
+
+## 24. Salesman — `/api/v1/salesman`
+
+Standard master CRUD (route is singular).
+
+**List:** `?page=1&pageSize=20&search=&active=true` — `search` matches name, printName, secondName, phone and email. Sorted by name.
+
+**Request body (POST / PUT)**
+
+| Field | Type | Req | Rules |
+|---|---|---|---|
+| salesmanName | string(100) | ✅ | Unique |
+| salesmanGroupId | int | ✅ | ≥ 1, id from Salesman Group |
+| employeeCode | int | – | Auto-generated (next number) on create if omitted; kept on update |
+| secondName | string | – | |
+| printName | string | – | Defaults to `salesmanName` |
+| address | string | – | |
+| phone | string | – | Digits and `+` only |
+| email | string | – | Valid email if provided |
+| isActive | bool | – | Default `true` |
+| connectWithAccount | bool | – | `true` = link to a ledger account |
+| accountId | int | ✅ if `connectWithAccount` | Active ledger account id |
+
+**Create / update response `data`:** `{ "id": 4, "salesmanCode": 4, "employeeCode": 4 }`.
+**GET response fields:** all request fields plus `id`.
+
+```json
+// POST /api/v1/salesman
+{ "salesmanName": "Ahmed Ali", "salesmanGroupId": 1, "phone": "+971501234567",
+  "email": "ahmed@example.com", "connectWithAccount": true, "accountId": 21 }
+```
+Errors: `"Salesman name already exists."`, `"Incorrect email format."`, `"Phone number can contain only digits and '+'."`, `"Account ID is required when connecting with an account."`, `"Account not found."`.
+
+> ⚠️ Note: on **create**, the server always checks `accountId` against active ledger accounts, even when `connectWithAccount` is `false`. Sending `accountId: 0` therefore returns `"Account not found."`. Until the backend is fixed, always send a valid account id on POST (update does not have this check).
