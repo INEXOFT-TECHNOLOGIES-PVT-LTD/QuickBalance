@@ -78,14 +78,14 @@ namespace QuickBalance.API.Repository.Master
             (
                 BOMNAME, ALIAS, PRCODE, QTY, UNIT, EXPENCES,
                 MCGENFLG, MCGEN, MCCONSFLG, MCCONS,
-                LOGCD, UTIME, SECNAME, ACTIVE
+                LOGCD, UTIME, SECNAME
             )
             OUTPUT INSERTED.CODE
             VALUES
             (
                 @BomName, @Alias, @PrCode, @Qty, @Unit, @Expences,
                 @McGenFlg, @McGen, @McConsFlg, @McCons,
-                @UserId, GETDATE(), @SecondName, @IsActive
+                @UserId, GETDATE(), @SecondName
             );";
 
             return await _db.QueryFirstOrDefaultAsync<int>(
@@ -98,13 +98,12 @@ namespace QuickBalance.API.Repository.Master
                     request.Qty,
                     request.Unit,
                     request.Expences,
-                    request.McGenFlg,
+                    McGenFlg = IsYes(request.McGenFlg),
                     request.McGen,
-                    request.McConsFlg,
+                    McConsFlg = IsYes(request.McConsFlg),
                     request.McCons,
                     UserId = userId,
-                    request.SecondName,
-                    request.IsActive
+                    request.SecondName
                 });
         }
 
@@ -132,8 +131,7 @@ namespace QuickBalance.API.Repository.Master
                 MCCONS = @McCons,
                 LOGCD = @UserId,
                 UTIME = GETDATE(),
-                SECNAME = @SecondName,
-                ACTIVE = @IsActive
+                SECNAME = @SecondName
             WHERE CODE = @Id;";
 
             return await _db.ExecuteAsync(
@@ -147,13 +145,12 @@ namespace QuickBalance.API.Repository.Master
                     request.Qty,
                     request.Unit,
                     request.Expences,
-                    request.McGenFlg,
+                    McGenFlg = IsYes(request.McGenFlg),
                     request.McGen,
-                    request.McConsFlg,
+                    McConsFlg = IsYes(request.McConsFlg),
                     request.McCons,
                     UserId = userId,
-                    request.SecondName,
-                    request.IsActive
+                    request.SecondName
                 });
         }
 
@@ -180,8 +177,7 @@ namespace QuickBalance.API.Repository.Master
                 B.UTIME AS UTime,
                 B.SECNAME AS SecondName,
                 P.PRNAME AS ProductName,
-                U.PRUNITNAME AS UnitName,
-                CAST(ISNULL(B.ACTIVE, 0) AS BIT) AS IsActive
+                U.PRUNITNAME AS UnitName
             FROM dbo.BOMMAS B
             LEFT JOIN dbo.PRMAST P ON B.PRCODE = P.PRCODE
             LEFT JOIN dbo.PRUNITMAS U ON B.UNIT = U.PRUNITID
@@ -254,7 +250,7 @@ namespace QuickBalance.API.Repository.Master
         //            ? 0
         //            : (int)Math.Ceiling(totalRecords / (double)pageSize);
 
-        //        return new PagedResponse<BomListItemDto>
+        //        return new PagedResponse<BomListDetailsDto>
         //        {
         //            Data = data.ToList(),
         //            Pagination = new PaginationInfo
@@ -268,7 +264,7 @@ namespace QuickBalance.API.Repository.Master
         //}
 
 
-        public async Task<PagedResponse<BomListItemDto>> GetAllAsync(
+        public async Task<PagedResponse<BomListDetailsDto>> GetAllAsync(
       int page,
       int pageSize,
       string? search,
@@ -318,19 +314,25 @@ namespace QuickBalance.API.Repository.Master
                 BM.CODE AS Id,
                 BM.BOMNAME AS BomName,
                 BM.ALIAS AS Alias,
-                P.PRNAME AS ProductName,
+                BM.PRCODE AS PrCode,
                 BM.QTY AS Qty,
-                U.PRUNITNAME AS UnitName,
-                CAST(ISNULL(BM.ACTIVE, 0) AS BIT) AS IsActive
+                BM.UNIT AS Unit,
+                BM.EXPENCES AS Expences,
+                BM.MCGENFLG AS McGenFlg,
+                BM.MCGEN AS McGen,
+                BM.MCCONSFLG AS McConsFlg,
+                BM.MCCONS AS McCons,
+                BM.LOGCD AS LogCd,
+                BM.UTIME AS UTime,
+                BM.SECNAME AS SecondName,
+                BM.ACTIVE AS Active
             FROM dbo.BOMMAS BM
-            LEFT JOIN dbo.PRMAST P ON BM.PRCODE = P.PRCODE
-            LEFT JOIN dbo.PRUNITMAS U ON BM.UNIT = U.PRUNITID
             {whereSql}
             ORDER BY BM.CODE DESC
             OFFSET @Offset ROWS
             FETCH NEXT @PageSize ROWS ONLY;";
 
-            var result = (await _db.QueryListAsync<BomListItemDto>(
+            var masters = (await _db.QueryListAsync<BomMasterDto>(
                 masterSql,
                 new
                 {
@@ -341,6 +343,58 @@ namespace QuickBalance.API.Repository.Master
                 })).ToList();
 
             // ============================================
+            // BOM ITEMS AND ADDITIONAL INFO
+            // ============================================
+
+            var bomCodes = masters.Select(x => x.Id).ToList();
+
+            var items = new List<BomItemDto>();
+            var additionalInfo = new List<BomAdditionalInfoDto>();
+
+            if (bomCodes.Count > 0)
+            {
+                // BOMT query pending actual column structure.
+                // Add the verified BOMT query here.
+
+                // ========================================
+                // BOMD - ADDITIONAL INFORMATION
+                // ========================================
+
+                string additionalSql = @"
+            SELECT
+                BD.BOMCODE AS Id,
+                BD.CODE AS AccountId,
+                BD.AMOUNT AS Amount
+            FROM dbo.BOMD BD
+            WHERE BD.BOMCODE IN @BomCodes
+            ORDER BY BD.BOMCODE;";
+
+                additionalInfo = (
+                    await _db.QueryListAsync<BomAdditionalInfoDto>(
+                        additionalSql,
+                        new { BomCodes = bomCodes }
+                    )).ToList();
+            }
+
+            // ============================================
+            // BUILD RESPONSE
+            // ============================================
+
+            var result = masters.Select(master => new BomListDetailsDto
+            {
+                bilofm_details = master,
+
+                Items = items
+                    .Where(x => x.Id == master.Id)
+                    .ToList(),
+
+                AdditionalInfo = additionalInfo
+                    .Where(x => x.Id == master.Id)
+                    .ToList()
+
+            }).ToList();
+
+            // ============================================
             // PAGINATION
             // ============================================
 
@@ -348,7 +402,7 @@ namespace QuickBalance.API.Repository.Master
                 ? 0
                 : (int)Math.Ceiling(totalRecords / (double)pageSize);
 
-            return new PagedResponse<BomListItemDto>
+            return new PagedResponse<BomListDetailsDto>
             {
                 Data = result,
 
@@ -401,9 +455,9 @@ namespace QuickBalance.API.Repository.Master
             const string sql = @"
             SELECT
                 T.BOMCODE AS Id,
-                T.PRCODE AS ProductId,
-                T.QTY AS Quantity,
-                T.UNIT AS UnitId,
+                T.PRCODE AS PrCode,
+                T.QTY AS Qty,
+                T.UNIT AS Unit,
                 T.TYPE AS Type,
                 P.BASEPURPRICE AS Price,
                 P.PURPRICETYPE AS PurPriceType,
@@ -433,9 +487,9 @@ namespace QuickBalance.API.Repository.Master
             const string sql = @"
             SELECT
                 T.BOMCODE AS Id,
-                T.PRCODE AS ProductId,
-                T.QTY AS Quantity,
-                T.UNIT AS UnitId,
+                T.PRCODE AS PrCode,
+                T.QTY AS Qty,
+                T.UNIT AS Unit,
                 T.TYPE AS Type
             FROM dbo.BOMT T
             INNER JOIN dbo.BOMMAS BM ON BM.CODE = T.BOMCODE
@@ -536,6 +590,11 @@ namespace QuickBalance.API.Repository.Master
         // ---------------------------------------------------------
         // HELPERS
         // ---------------------------------------------------------
+
+        private static bool IsYes(string? value)
+        {
+            return value?.Trim().ToUpperInvariant() is "Y" or "YES" or "TRUE" or "1";
+        }
 
         private static string NormalizeType(string? value)
         {

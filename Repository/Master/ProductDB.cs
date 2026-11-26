@@ -296,10 +296,7 @@ public sealed class ProductDB
             {
                 Page = page,
                 PageSize = pageSize,
-                TotalRecords = totalRecords,
-                TotalPages = totalRecords == 0
-                    ? 0
-                    : (int)Math.Ceiling(totalRecords / (double)pageSize)
+                TotalRecords = totalRecords
             }
         };
     }

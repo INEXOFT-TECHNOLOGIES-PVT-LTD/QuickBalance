@@ -20,7 +20,7 @@ namespace QuickBalance.API.Interfaces
             int pageSize,
             string? search = null);
 
-        Task<ApiResponse<CurrencyConversionDetailsResponse>> GetConversionByIdAsync(
+        Task<ApiResponse<List<CurrencyConversionResponse>>> GetConversionByIdAsync(
             int code);
 
         Task<ApiResponse<List<CurrencyConversionCurrencyResponse>>>

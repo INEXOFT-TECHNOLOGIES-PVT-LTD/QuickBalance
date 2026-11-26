@@ -27,7 +27,7 @@ namespace QuickBalance.API.Controllers.Master
 
         [HttpGet]
 
-        [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<UnitConversionDto>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<UnitConversionDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
@@ -39,10 +39,6 @@ namespace QuickBalance.API.Controllers.Master
         }
 
         [HttpGet("{id:int}")]
-        [ProducesResponseType(typeof(ApiResponseWithoutPagination<UnitConversionDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetByCode(int id)
         {
             var response = await _service.GetByCode(id);

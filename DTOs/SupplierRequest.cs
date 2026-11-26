@@ -28,7 +28,6 @@ namespace QuickBalance.API.DTOs
         [EmailAddress(ErrorMessage = "Enter a valid email address.")]
         public string? Email { get; set; }
 
-        [System.Text.Json.Serialization.JsonPropertyName("isActive")]
         public bool Active { get; set; } = true;
 
         [Range(1, int.MaxValue, ErrorMessage = "Ledger group ID must be greater than zero.")]
@@ -133,13 +132,8 @@ namespace QuickBalance.API.DTOs
 
         [Required(ErrorMessage = "Debit/Credit type is required.")]
         [RegularExpression(@"^(?i:CR|DR)$",
-            ErrorMessage = "Credit or Debit must be either CR or DR.")]
-        public string CrDr
-        {
-            get => _crDr;
-            set => _crDr = string.IsNullOrWhiteSpace(value) ? value! : value.Trim().ToUpperInvariant();
-        }
-        private string _crDr = "CR";
+            ErrorMessage = "Credit or Debit must be either Cr or Dr.")]
+        public string CrDr { get; set; } = "Cr";
 
         //[Range(0, int.MaxValue, ErrorMessage = "Currency code cannot be negative.")]
         [Range(0, 100,

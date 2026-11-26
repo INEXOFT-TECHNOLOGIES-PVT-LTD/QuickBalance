@@ -32,13 +32,17 @@ namespace QuickBalance.API.DTOs
             ErrorMessage = "Expenses cannot be negative.")]
         public decimal Expences { get; set; }
 
-        public bool McGenFlg { get; set; }
+        [RegularExpression("^(Y|N)$",
+            ErrorMessage = "Machine generation flag must be Y or N.")]
+        public string? McGenFlg { get; set; }
 
         [Range(1, int.MaxValue,
             ErrorMessage = "Machine generation account must be greater than zero.")]
         public int? McGen { get; set; }
 
-        public bool McConsFlg { get; set; }
+        [RegularExpression("^(Y|N)$",
+            ErrorMessage = "Machine consumption flag must be Y or N.")]
+        public string? McConsFlg { get; set; }
 
         [Range(1, int.MaxValue,
             ErrorMessage = "Machine consumption account must be greater than zero.")]
@@ -48,8 +52,6 @@ namespace QuickBalance.API.DTOs
             ErrorMessage = "Second name cannot exceed 250 characters.")]
         public string? SecondName { get; set; }
 
-        public bool IsActive { get; set; } = true;
-
         public List<BomItemRequest> Items { get; set; } = [];
 
         public List<BomAdditionalInfoRequest> AdditionalInfo { get; set; } = [];
@@ -58,7 +60,7 @@ namespace QuickBalance.API.DTOs
             ValidationContext validationContext)
         {
             // Machine generation validation
-            if (McGenFlg && (!McGen.HasValue || McGen.Value <= 0))
+            if (McGenFlg == "Y" && (!McGen.HasValue || McGen.Value <= 0))
             {
                 yield return new ValidationResult(
                     "Machine generation account is required.",
@@ -66,7 +68,7 @@ namespace QuickBalance.API.DTOs
             }
 
             // Machine consumption validation
-            if (McConsFlg && (!McCons.HasValue || McCons.Value <= 0))
+            if (McConsFlg == "Y" && (!McCons.HasValue || McCons.Value <= 0))
             {
                 yield return new ValidationResult(
                     "Machine consumption account is required.",
@@ -142,20 +144,15 @@ namespace QuickBalance.API.DTOs
         public string? SecondName { get; set; }
         public string? ProductName { get; set; }
         public string? UnitName { get; set; }
-        public bool IsActive { get; set; } = true;
     }
-    /// <summary>Flat row for GET /api/v1/boms (list only).</summary>
-    public class BomListItemDto
+    public class BomListDetailsDto
     {
-        public int Id { get; set; }
-        public string? BomName { get; set; }
-        public string? Alias { get; set; }
-        public string? ProductName { get; set; }
-        public decimal Qty { get; set; }
-        public string? UnitName { get; set; }
-        public bool IsActive { get; set; }
-    }
+        public BomMasterDto bilofm_details { get; set; } = new();
 
+        public List<BomItemDto> Items { get; set; } = [];
+
+        public List<BomAdditionalInfoDto> AdditionalInfo { get; set; } = [];
+    }
     public class BomListDto
     {
         public int Id { get; set; }
@@ -166,9 +163,9 @@ namespace QuickBalance.API.DTOs
     public class BomItemDto
     {
         public int Id { get; set; }
-        public int ProductId { get; set; }
-        public decimal Quantity { get; set; }
-        public int UnitId { get; set; }
+        public int PrCode { get; set; }
+        public decimal Qty { get; set; }
+        public int Unit { get; set; }
         public string? Type { get; set; }
 
         public decimal? Price { get; set; }
@@ -188,9 +185,9 @@ namespace QuickBalance.API.DTOs
         public decimal? Amount { get; set; }
     }
 
-    /// <summary>Flat GET /boms/{id} response: header fields at top level plus items and additionalInfo.</summary>
-    public class BomDetailsDto : BomMasterDto
+    public class BomDetailsDto
     {
+        public BomMasterDto bilofm_details { get; set; } = new();
         public List<BomItemDto> Items { get; set; } = [];
         public List<BomAdditionalInfoDto> AdditionalInfo { get; set; } = [];
     }

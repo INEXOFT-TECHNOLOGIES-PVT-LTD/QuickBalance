@@ -82,7 +82,7 @@ namespace QuickBalance.API.Services
         // =========================================================
         // GET ALL
         // =========================================================
-        public async Task<ApiResponse<IReadOnlyList<SalesmanGroupListItemDto>>>
+        public async Task<ApiResponse<IReadOnlyList<SalesmanGroupResponse>>>
             GetAllAsync(
                 int page,
                 int pageSize,
@@ -93,7 +93,7 @@ namespace QuickBalance.API.Services
             try
             {
                 if (userId <= 0)
-                    return ApiResponse<IReadOnlyList<SalesmanGroupListItemDto>>
+                    return ApiResponse<IReadOnlyList<SalesmanGroupResponse>>
                         .Failure("Invalid user ID.");
 
                 page = Math.Max(1, page);
@@ -121,7 +121,7 @@ namespace QuickBalance.API.Services
                         (double)totalRecords / pageSize)
                 };
 
-                return ApiResponse<IReadOnlyList<SalesmanGroupListItemDto>>
+                return ApiResponse<IReadOnlyList<SalesmanGroupResponse>>
                     .SuccessWithPagination(
                         "Salesman groups retrieved successfully.",
                         groups,
@@ -132,7 +132,7 @@ namespace QuickBalance.API.Services
                 _logger.LogError(
                     ex, "Error retrieving salesman groups.");
 
-                return ApiResponse<IReadOnlyList<SalesmanGroupListItemDto>>
+                return ApiResponse<IReadOnlyList<SalesmanGroupResponse>>
                     .Failure("Unable to retrieve salesman groups.");
             }
         }

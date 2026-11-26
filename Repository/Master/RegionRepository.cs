@@ -20,7 +20,7 @@ public class RegionRepository
         const string query = """
         SELECT
             COUNTRYID AS CountryId,
-            REGIONID AS Id,
+            REGIONID AS RegionId,
             REGIONNAME AS RegionName,
             REGIONSECNAME AS RegionSecName,
             ACTIVE AS IsActive
@@ -40,8 +40,7 @@ public class RegionRepository
     int countryId,
     string? search,
     int page,
-    int pageSize,
-    bool? active = null)
+    int pageSize)
     {
         search = string.IsNullOrWhiteSpace(search)
             ? null
@@ -50,8 +49,7 @@ public class RegionRepository
         const string countSql = """
         SELECT COUNT(1)
         FROM dbo.REGION
-        WHERE COUNTRYID = @CountryId
-          AND (@Active IS NULL OR ACTIVE = @Active)
+        WHERE ACTIVE = 1 and COUNTRYID = @CountryId
           AND
           (
               @Search IS NULL
@@ -65,20 +63,18 @@ public class RegionRepository
             new
             {
                 CountryId = countryId,
-                Search = search,
-                Active = active
+                Search = search
             });
 
         const string dataSql = """
         SELECT
             COUNTRYID AS CountryId,
-            REGIONID AS Id,
+            REGIONID AS RegionId,
             REGIONNAME AS RegionName,
             REGIONSECNAME AS RegionSecName,
             ACTIVE AS IsActive
         FROM dbo.REGION
-        WHERE COUNTRYID = @CountryId
-          AND (@Active IS NULL OR ACTIVE = @Active)
+        WHERE ACTIVE=1 and COUNTRYID = @CountryId
           AND
           (
               @Search IS NULL
@@ -98,7 +94,6 @@ public class RegionRepository
             {
                 CountryId = countryId,
                 Search = search,
-                Active = active,
                 Offset = offset,
                 PageSize = pageSize
             })).ToList();
@@ -121,12 +116,11 @@ public class RegionRepository
         const string query = """
         SELECT
             COUNTRYID AS CountryId,
-            REGIONID AS Id,
+            REGIONID AS RegionId,
             REGIONNAME AS RegionName,
-            REGIONSECNAME AS RegionSecName,
-            CAST(ISNULL(ACTIVE, 0) AS BIT) AS IsActive
+            REGIONSECNAME AS RegionSecName
         FROM dbo.REGION
-        WHERE REGIONID = @RegionId;
+        WHERE ACTIVE=1 and REGIONID = @RegionId;
         """;
 
         return await _db.QueryMasterFirstOrDefaultAsync<RegionResponse>(
@@ -188,7 +182,7 @@ public class RegionRepository
     {
         string query = $@"
              SELECT COUNTRYID as CountryId
-             REGIONID AS Id,
+             REGIONID AS RegionId,
             REGIONNAME AS RegionName,
             REGIONSECNAME AS RegionSecName
              FROM dbo.REGION WHERE ACTIVE=1 and COUNTRYID = @CountryId ORDER BY REGIONNAME;";

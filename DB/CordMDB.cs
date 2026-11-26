@@ -54,13 +54,13 @@ namespace QuickBalance.API.DB
             if (fromDate.HasValue)
             {
                 dateCondition += $@"
-            AND CORDM.ORDDATE >= '{fromDate.Value.ToString("yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture)}'";
+            AND CORDM.ORDDATE >= '{fromDate.Value.ToString(Variables.format)}'";
             }
 
             if (toDate.HasValue)
             {
                 dateCondition += $@"
-            AND CORDM.ORDDATE < '{toDate.Value.AddDays(1).ToString("yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture)}'";
+            AND CORDM.ORDDATE < '{toDate.Value.AddDays(1).ToString(Variables.format)}'";
             }
 
             qry = $@"
@@ -70,7 +70,6 @@ namespace QuickBalance.API.DB
             FORMAT(CORDM.ORDDATE, '{Variables.format}') AS [Order Date],
             ACCMAS.ACCNAME AS Customer,
             FORMAT(CORDM.AMOUNT, '{Variables.DecString}') AS Amount,
-            CAST(ISNULL(CORDM.CANCELFLG, 0) AS BIT) AS Cancelled,
             COUNT(*) OVER() AS TotalRecords
         FROM CORDM
         INNER JOIN ACCMAS ON CORDM.CUSCODE = ACCMAS.ID

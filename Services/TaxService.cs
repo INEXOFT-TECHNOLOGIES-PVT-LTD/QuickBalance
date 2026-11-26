@@ -97,29 +97,29 @@ public sealed class TaxService : ITaxInterface
                     "Tax name already exists.");
 
             // Validate() guarantees every account ID has a value > 0.
-            var salesAccountExists = await _account.GetAccountById(request.SalesAccountId);
+            var salesAccountExists = await _account.GetAccountById(request.SalesAccountId!.Value);
             if(salesAccountExists==0)
                 return ApiResponse<int>.Failure(
                     "Sales account does not exist.");
-            var purchaseAccountExists = await _account.GetAccountById(request.PurchaseAccountId);
+            var purchaseAccountExists = await _account.GetAccountById(request.PurchaseAccountId!.Value);
             if(purchaseAccountExists == 0)
                 return ApiResponse<int>.Failure(
                     "Purchase account does not exist.");
 
-            var salesReturnAccountExists = await _account.GetAccountById(request.SalesReturnAccountId);
+            var salesReturnAccountExists = await _account.GetAccountById(request.SalesReturnAccountId!.Value);
             if(salesReturnAccountExists == 0)
                 return ApiResponse<int>.Failure(
                     "Sales return account does not exist.");
 
-            var purchaseReturnAccountExists = await _account.GetAccountById(request.PurchaseReturnAccountId);
+            var purchaseReturnAccountExists = await _account.GetAccountById(request.PurchaseReturnAccountId!.Value);
             if (purchaseReturnAccountExists == 0)
                 return ApiResponse<int>.Failure(
                     "Purchase return account does not exist.");
-            var vatAccountExistsSale = await _account.GetAccountById(request.VatAccountId);
+            var vatAccountExistsSale = await _account.GetAccountById(request.VatAccountId!.Value);
             if (vatAccountExistsSale == 0)
                 return ApiResponse<int>.Failure(
                     "VAT (Sales) account does not exist.");
-            var taxAccountExistsPurchase = await _account.GetAccountById(request.TaxAccountId);
+            var taxAccountExistsPurchase = await _account.GetAccountById(request.TaxAccountId!.Value);
             if (taxAccountExistsPurchase == 0)
                 return ApiResponse<int>.Failure(
                     "Tax(Purchase) account does not exist.");
@@ -235,29 +235,29 @@ public sealed class TaxService : ITaxInterface
                     "Tax name already exists.");
 
             // Validate() guarantees every account ID has a value > 0.
-            var salesAccountExists = await _account.GetAccountById(request.SalesAccountId);
+            var salesAccountExists = await _account.GetAccountById(request.SalesAccountId!.Value);
             if (salesAccountExists == 0)
                 return ApiResponse<bool>.Failure(
                     "Sales account does not exist.");
-            var purchaseAccountExists = await _account.GetAccountById(request.PurchaseAccountId);
+            var purchaseAccountExists = await _account.GetAccountById(request.PurchaseAccountId!.Value);
             if (purchaseAccountExists == 0)
                 return ApiResponse<bool>.Failure(
                     "Purchase account does not exist.");
 
-            var salesReturnAccountExists = await _account.GetAccountById(request.SalesReturnAccountId);
+            var salesReturnAccountExists = await _account.GetAccountById(request.SalesReturnAccountId!.Value);
             if (salesReturnAccountExists == 0)
                 return ApiResponse<bool>.Failure(
                     "Sales return account does not exist.");
 
-            var purchaseReturnAccountExists = await _account.GetAccountById(request.PurchaseReturnAccountId);
+            var purchaseReturnAccountExists = await _account.GetAccountById(request.PurchaseReturnAccountId!.Value);
             if (purchaseReturnAccountExists == 0)
                 return ApiResponse<bool>.Failure(
                     "Purchase return account does not exist.");
-            var vatAccountExistsSale = await _account.GetAccountById(request.VatAccountId);
+            var vatAccountExistsSale = await _account.GetAccountById(request.VatAccountId!.Value);
             if (vatAccountExistsSale == 0)
                 return ApiResponse<bool>.Failure(
                     "VAT (Sales) account does not exist.");
-            var taxAccountExistsPurchase = await _account.GetAccountById(request.TaxAccountId);
+            var taxAccountExistsPurchase = await _account.GetAccountById(request.TaxAccountId!.Value);
             if (taxAccountExistsPurchase == 0)
                 return ApiResponse<bool>.Failure(
                     "Tax(Purchase) account does not exist.");

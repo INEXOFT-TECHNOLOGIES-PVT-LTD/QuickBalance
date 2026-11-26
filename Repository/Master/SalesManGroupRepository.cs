@@ -139,7 +139,7 @@ namespace QuickBalance.API.Repository.Master
         // =========================================================
         // GET ALL - PAGINATED
         // =========================================================
-        public async Task<List<SalesmanGroupListItemDto>> GetAllAsync(int page, int pageSize, string? search, bool? active = null)
+        public async Task<List<SalesmanGroupResponse>> GetAllAsync(int page, int pageSize, string? search, bool? active = null)
         {
             const string query = @"
         SELECT
@@ -147,7 +147,9 @@ namespace QuickBalance.API.Repository.Master
             SMGRPNAME AS GroupName,
             SECNAME AS SecondName,
             PRINTNAME AS PrintName,
-            ACTIVE AS IsActive
+            ACTIVE AS IsActive,
+            LOGCD AS LogCode,
+            UTIME AS UpdateTime
         FROM SMGRP
         WHERE
             (@Active IS NULL OR ISNULL(ACTIVE, 0) = @Active)
@@ -164,7 +166,7 @@ namespace QuickBalance.API.Repository.Master
         OFFSET @Offset ROWS
         FETCH NEXT @PageSize ROWS ONLY";
 
-            return await _db.QueryListAsync<SalesmanGroupListItemDto>(
+            return await _db.QueryListAsync<SalesmanGroupResponse>(
                 query,
                 new
                 {
@@ -211,7 +213,9 @@ namespace QuickBalance.API.Repository.Master
             SMGRPNAME AS GroupName,
             SECNAME AS SecondName,
             PRINTNAME AS PrintName,
-            ACTIVE AS IsActive
+            ACTIVE AS IsActive,
+            LOGCD AS LogCode,
+            UTIME AS UpdateTime
         FROM SMGRP
         WHERE
             SMGRPCODE = @GroupCode

@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
 
 namespace QuickBalance.API.DTOs
 {
@@ -17,14 +16,7 @@ namespace QuickBalance.API.DTOs
     {
         public int Id { get; set; }
         public string? CountryName { get; set; }
-
-        [JsonIgnore]
         public bool? Active { get; set; }
-
-        /// <summary>Read-only. A NULL ACTIVE is returned as true.</summary>
-        [JsonPropertyName("isActive")]
-        public bool? IsActive => Active ?? true;
-
         public string? CurSymbol { get; set; }
         public string? Farabic { get; set; }
         public string? FormalName { get; set; }

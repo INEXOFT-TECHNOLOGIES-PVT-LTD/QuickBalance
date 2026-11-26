@@ -29,7 +29,7 @@ namespace QuickBalance.API.Controllers.Master
 
         // GET: api/brands?page=1&pageSize=20&search=sony
         [HttpGet]
-        [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<BrandResponse>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<BrandResponse>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]

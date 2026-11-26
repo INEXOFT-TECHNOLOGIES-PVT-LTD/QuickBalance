@@ -43,18 +43,6 @@ namespace QuickBalance.API.DTOs
         //public DateTime? UTime { get; set; }
     }
 
-    /// <summary>Row for GET /api/v1/location-groups (list only; no internal fields).</summary>
-    public class LocationGroupListItemDto
-    {
-        public int Id { get; set; }
-
-        public string? GroupName { get; set; }
-
-        public bool IsActive { get; set; }
-
-        public string? SecondName { get; set; }
-    }
-
     public class LocationGroupDropdownDto
     {
         public int Id { get; set; }

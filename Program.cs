@@ -13,12 +13,14 @@ using QuickBalance.API.Repositories;
 using QuickBalance.API.Repository;
 using QuickBalance.API.Repository.Master;
 using QuickBalance.API.Repository.Master.QuickBalance.API.Repository.Master;
-using QuickBalance.API.Repository.Transactions.Sales;
 using QuickBalance.API.Services;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.RateLimiting;
+using QuickBalance.API.Interfaces.Purchase;
+using QuickBalance.API.Repository.Purchase;
+using QuickBalance.API.Services.Purchase;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -168,14 +170,21 @@ builder.Services.AddScoped<ISalesmanGroupInterface, SalesmanGroupService>();
 
 builder.Services.AddScoped<SalesManRepository>();
 builder.Services.AddScoped<ISalesmanInterface, SalesmanService>();
-builder.Services.AddScoped<SalesBillingRepository>();
-builder.Services.AddScoped<ISalesBillingInterface, SalesBillingService>();
-// Sales Return (new layered API)
-builder.Services.AddScoped<SalesReturnRepository>();
-builder.Services.AddScoped<ISalesReturnInterface, SalesReturnService>();
-// Sales Order (layered)
-builder.Services.AddScoped<SalesOrderRepository>();
-builder.Services.AddScoped<ISalesOrderInterface, SalesOrderService>();
+//purchase Order
+builder.Services.AddScoped<
+    IPurchaseOrderRepository,
+    PurchaseOrderRepository>();
+
+builder.Services.AddScoped<
+    IPurchaseOrderInterface,
+    PurchaseOrderService>();
+// Purchase Invoice
+builder.Services.AddScoped<IPurchaseInvoiceService, PurchaseInvoiceService>();
+builder.Services.AddScoped<IPurchaseInvoiceRepository, PurchaseInvoiceRepository>();
+
+//builder.Services.AddScoped<IPurchaseInvoiceRepository, PurchaseInvoiceRepository>();
+//builder.Services.AddScoped<IPurchaseInvoiceService, PurchaseInvoiceService>();
+
 // ============================================================
 // CONTROLLERS AND JSON
 // ============================================================

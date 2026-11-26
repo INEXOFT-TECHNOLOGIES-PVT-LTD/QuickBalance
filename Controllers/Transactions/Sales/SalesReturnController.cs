@@ -9,7 +9,6 @@ using System.Security.Claims;
 
 namespace QuickBalance.API.Controllers.Transactions.Sales
 {
-    [ApiExplorerSettings(IgnoreApi = true)]   // hidden: replaced by the new layered API
     [ApiController]
     [Tags("27. Sales Returns")]
 

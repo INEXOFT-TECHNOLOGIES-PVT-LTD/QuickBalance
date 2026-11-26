@@ -22,7 +22,6 @@
 
   <ItemGroup>
     <Folder Include="Data\" />
-    <Folder Include="DTOs\Sales\SalesBilling\" />
   </ItemGroup>
 
   <ProjectExtensions><VisualStudio><UserProperties appsettings_1json__JsonSchema="https://www.schemastore.org/artifacthub-repo.json" /></VisualStudio></ProjectExtensions>

@@ -5,9 +5,6 @@ namespace QuickBalance.API.DTOs
 {
     public class PriceCategoryLevelInputRequest
     {
-        /// <summary>Optional level id echoed back on edit. Ignored: saving replaces all levels.</summary>
-        public int? Id { get; set; }
-
         [Required(ErrorMessage = "Discount structure is required.")]
         [StringLength(
             25,

@@ -24,14 +24,12 @@ namespace QuickBalance.API.Controllers.Master
         private readonly DatabaseConnection _databaseConnection;
         private readonly SupplierDB _supplierDB;
         private readonly IMemoryCache _memoryCache;
-        private readonly ILogger<SupplierController> _logger;
 
-        public SupplierController(DatabaseConnection databaseConnection, SupplierDB supplierDB, IMemoryCache memoryCache, ILogger<SupplierController> logger)
+        public SupplierController(DatabaseConnection databaseConnection, SupplierDB supplierDB, IMemoryCache memoryCache)
         {
             _databaseConnection = databaseConnection;
             _supplierDB = supplierDB;
             _memoryCache = memoryCache;
-            _logger = logger;
         }
         // =========================================================
         // MAP REQUEST DTO TO CLS
@@ -48,7 +46,7 @@ namespace QuickBalance.API.Controllers.Master
 
 
         [HttpGet]
-        [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<clsSupplierResponse>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<List<clsSupplier>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
@@ -421,7 +419,7 @@ namespace QuickBalance.API.Controllers.Master
                 {
                     return BadRequest(
                         ApiResponseWithError.Failure(
-                            "Opening balance type must be CR or DR."));
+                            "Opening balance type must be Cr or Dr."));
                 }
 
                 // PendingBills must be supplied during update.
@@ -486,8 +484,8 @@ namespace QuickBalance.API.Controllers.Master
                     request.CrDr,
                     "Cr",
                     StringComparison.OrdinalIgnoreCase)
-                        ? "CR"
-                        : "DR";
+                        ? "Cr"
+                        : "Dr";
 
                 // Update supplier and linked account.
                 bool updated = await _supplierDB.UpdateSupplier(
@@ -844,7 +842,7 @@ namespace QuickBalance.API.Controllers.Master
 
         [HttpGet("lookups/ledger-groups")]
 
-        [ProducesResponseType(typeof(ApiResponseWithoutPagination<IReadOnlyList<LookupItem>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponseWithoutPagination<List<LookupItem>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
@@ -852,11 +850,10 @@ namespace QuickBalance.API.Controllers.Master
         {
             try
             {
-                IReadOnlyList<LookupItem> data =
-                    await _supplierDB.GetLedgerGroups() ?? new List<LookupItem>();
+                var data = await _supplierDB.GetLedgerGroups();
 
                 return Ok(
-                    ApiResponseWithoutPagination<IReadOnlyList<LookupItem>>.Success(
+                    ApiResponseWithoutPagination<List<LookupItem>>.Success(
                         "Ledger groups retrieved successfully.",
                         data
                     )
@@ -864,8 +861,6 @@ namespace QuickBalance.API.Controllers.Master
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving supplier ledger groups lookup.");
-
                 return StatusCode(
                     StatusCodes.Status500InternalServerError,
                     ApiResponseWithError.Failure(
