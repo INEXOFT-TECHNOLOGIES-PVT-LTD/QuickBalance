@@ -16,7 +16,9 @@ namespace QuickBalance.API.Interfaces
             int id,
             int userId);
 
-        Task<ApiResponse<IReadOnlyList<LookupItem>>> GetAllAsync(
+        Task<ApiResponse<PartyGroupResponse>> GetByIdAsync(int id);
+
+        Task<ApiResponse<IReadOnlyList<PartyGroupListItem>>> GetAllAsync(
             string groupType,
             int page,
             int pageSize,

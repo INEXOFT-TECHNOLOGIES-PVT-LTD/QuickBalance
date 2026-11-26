@@ -14,13 +14,13 @@ namespace QuickBalance.API.Controllers.Master
     {
         // GET: api/vat-types
         [HttpGet("vat-types")]
-        [ProducesResponseType(typeof(ApiResponseWithoutPagination<List<DropdownOption>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponseWithoutPagination<IReadOnlyList<DropdownOption>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
-        public Task<ApiResponseWithoutPagination<List<DropdownOption>>> GetVatTypes()
+        public Task<ApiResponseWithoutPagination<IReadOnlyList<DropdownOption>>> GetVatTypes()
         {
-            var vatTypes = new List<DropdownOption>
+            IReadOnlyList<DropdownOption> vatTypes = new List<DropdownOption>
             {
                 new() { Id = "Standard VAT", Name = "Standard VAT" },
                 new() { Id = "Multi-rate VAT", Name = "Multi-rate VAT" },
@@ -30,7 +30,7 @@ namespace QuickBalance.API.Controllers.Master
                 new() { Id = "Destination-based VAT", Name = "Destination-based VAT" },
                 new() { Id = "Small Business VAT", Name = "Small Business VAT" }
             };
-            var response = ApiResponseWithoutPagination<List<DropdownOption>>
+            var response = ApiResponseWithoutPagination<IReadOnlyList<DropdownOption>>
             .Success("VAT types retrieved successfully.", vatTypes);
 
             return Task.FromResult(response);
@@ -38,18 +38,19 @@ namespace QuickBalance.API.Controllers.Master
         }
 
         [HttpGet("einvoice-id-types")]
-        [ProducesResponseType(typeof(ApiResponseWithoutPagination<List<string>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponseWithoutPagination<IReadOnlyList<DropdownOption>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
-        public Task<ApiResponseWithoutPagination<List<string>>> GetIdTypes()
+        public Task<ApiResponseWithoutPagination<IReadOnlyList<DropdownOption>>> GetIdTypes()
         {
-            var data = new List<string>
-            {
-                "CRN", "MOM", "MLS", "700","SAG", "OTH", "NAT", "IQA", "PAS", "GCC"
-            };
+            string[] codes = { "CRN", "MOM", "MLS", "700", "SAG", "OTH", "NAT", "IQA", "PAS", "GCC" };
 
-            var response = ApiResponseWithoutPagination<List<string>>
+            IReadOnlyList<DropdownOption> data = codes
+                .Select(code => new DropdownOption { Id = code, Name = code })
+                .ToList();
+
+            var response = ApiResponseWithoutPagination<IReadOnlyList<DropdownOption>>
              .Success("E-invoice ID types retrieved successfully.", data);
 
             return Task.FromResult(response);

@@ -22,10 +22,12 @@ namespace QuickBalance.API.Controllers.Master
         private readonly IMemoryCache _memoryCache;
         private readonly DatabaseConnection _databaseConnection;
         private readonly ICurrentUser _currentUser;
+        private readonly ILogger<CustomerController> _logger;
 
-        public CustomerController(CustomerDB customerDB,DatabaseConnection dbConnection, IMemoryCache memoryCache, ICurrentUser currentUser)
+        public CustomerController(CustomerDB customerDB,DatabaseConnection dbConnection, IMemoryCache memoryCache, ICurrentUser currentUser, ILogger<CustomerController> logger)
 
         {
+            _logger = logger;
             _customerDB = customerDB;
             _memoryCache = memoryCache;
             _databaseConnection = dbConnection;
@@ -38,7 +40,7 @@ namespace QuickBalance.API.Controllers.Master
         // =========================================================
 
         [HttpGet]
-        [ProducesResponseType(typeof(ApiResponse<List<clsCustomer>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<clsCustomer>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
@@ -56,30 +58,25 @@ namespace QuickBalance.API.Controllers.Master
                     active
                 );
 
-                return Ok(new
-                {
-                    status = true,
-                    data = result.Data,
-                    pagination = new
+                return Ok(ApiResponse<IReadOnlyList<clsCustomer>>.SuccessWithPagination(
+                    "Customers retrieved successfully.",
+                    result.Data,
+                    new PaginationInfo
                     {
-                        page = page,
-                        pageSize = pageSize,
-                        totalRecords = result.TotalRecords,
-                        totalPages = (int)Math.Ceiling(
+                        Page = page,
+                        PageSize = pageSize,
+                        TotalRecords = result.TotalRecords,
+                        TotalPages = (int)Math.Ceiling(
                             (double)result.TotalRecords /
                             pageSize
                         )
-                    }
-                });
+                    }));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    status = false,
-                    message = "Error retrieving customers.",
-                    error = ex.Message
-                });
+                _logger.LogError(ex, "Error retrieving customers.");
+                return StatusCode(500, ApiResponseWithError.Failure(
+                    "An error occurred while retrieving customers."));
             }
         }
 
@@ -108,11 +105,9 @@ namespace QuickBalance.API.Controllers.Master
                     });
                 }
 
-                return Ok(new
-                {
-                    status = true,
-                    data = customer
-                });
+                return Ok(ApiResponse<clsCustomer>.Success(
+                    "Customer retrieved successfully.",
+                    customer));
             }
             catch (Exception ex)
             {
@@ -441,7 +436,7 @@ public async Task<IActionResult> UpdateCustomer(
                 // If the request does not contain a ledger group,
                 // retain the existing customer's ledger group.
                 int effectiveLedgerGroupId =
-                    request.LedgerGroupId ?? existingCustomer.LedgerGroupId;
+                    request.LedgerGroupId ?? existingCustomer.LedgerGroupId ?? 0;
 
                 if (effectiveLedgerGroupId <= 0)
                 {
@@ -677,7 +672,7 @@ public async Task<IActionResult> UpdateCustomer(
         //}
         // GET: api/v1/customers/lookups/ledger-groups
         [HttpGet("lookups/ledger-groups")]
-        [ProducesResponseType(typeof(ApiResponseWithoutPagination<LookupItem>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponseWithoutPagination<IReadOnlyList<LookupItem>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
         //[ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status409Conflict)]
@@ -687,25 +682,18 @@ public async Task<IActionResult> UpdateCustomer(
         {
             try
             {
-                var data = _customerDB.GetCustomerLedgerGroups();
+                IReadOnlyList<LookupItem> data =
+                    _customerDB.GetCustomerLedgerGroups() ?? new List<LookupItem>();
 
-                return Ok(new
-                {
-                    status = true,
-                    message = "Ledger groups retrieved successfully.",
-                    data
-                });
+                return Ok(ApiResponseWithoutPagination<IReadOnlyList<LookupItem>>.Success(
+                    "Ledger groups retrieved successfully.", data));
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                _logger.LogError(ex, "Error retrieving customer ledger groups lookup.");
 
-                return StatusCode(500, new
-                {
-                    status = false,
-                    message = "Failed to retrieve ledger groups.",
-                    error = ex.Message
-                });
+                return StatusCode(500,
+                    ApiResponseWithError.Failure("Failed to retrieve ledger groups."));
             }
         }
         // GET: api/v1/customers/lookups/item-groups
@@ -943,7 +931,7 @@ public async Task<IActionResult> UpdateCustomer(
         //    }
         //}
         [HttpGet("lookups/salesman")]
-        [ProducesResponseType(typeof(ApiResponseWithoutPagination<LookupItem>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponseWithoutPagination<IReadOnlyList<LookupItem>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
         //[ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status409Conflict)]
@@ -953,23 +941,18 @@ public async Task<IActionResult> UpdateCustomer(
         {
             try
             {
-                var data = _customerDB.GetSalesmen();
+                IReadOnlyList<LookupItem> data =
+                    _customerDB.GetSalesmen() ?? new List<LookupItem>();
 
-                return Ok(new
-                {
-                    status = true,
-                    message = "salesman retrieved successfully.",
-                    data
-                });
+                return Ok(ApiResponseWithoutPagination<IReadOnlyList<LookupItem>>.Success(
+                    "salesman retrieved successfully.", data));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    status = false,
-                    message = "Error retrieving salesman.",
-                    error = ex.Message
-                });
+                _logger.LogError(ex, "Error retrieving salesman lookup.");
+
+                return StatusCode(500,
+                    ApiResponseWithError.Failure("Error retrieving salesman."));
             }
         }
 

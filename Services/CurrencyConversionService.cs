@@ -81,13 +81,13 @@ namespace QuickBalance.API.Services
         // GET CONVERSION BY ID
         // Returns all conversion rows belonging to that date.
         // ---------------------------------------------------------
-        public async Task<ApiResponse<List<CurrencyConversionResponse>>>GetConversionByIdAsync(int code)
+        public async Task<ApiResponse<CurrencyConversionDetailsResponse>>GetConversionByIdAsync(int code)
         {
             try
             {
                 if (code <= 0)
                 {
-                    return ApiResponse<List<CurrencyConversionResponse>>
+                    return ApiResponse<CurrencyConversionDetailsResponse>
                         .Failure("Invalid conversion ID.");
                 }
 
@@ -97,7 +97,7 @@ namespace QuickBalance.API.Services
                 if (conversion == null ||
                     conversion.ConversionDate == null)
                 {
-                    return ApiResponse<List<CurrencyConversionResponse>>
+                    return ApiResponse<CurrencyConversionDetailsResponse>
                         .Failure("Currency conversion not found.");
                 }
 
@@ -107,14 +107,28 @@ namespace QuickBalance.API.Services
 
                 if (data.Count == 0)
                 {
-                    return ApiResponse<List<CurrencyConversionResponse>>
+                    return ApiResponse<CurrencyConversionDetailsResponse>
                         .Failure("Currency conversion not found.");
                 }
 
-                return ApiResponse<List<CurrencyConversionResponse>>
+                var result = new CurrencyConversionDetailsResponse
+                {
+                    ConversionDate = conversion.ConversionDate,
+                    Details = data.Select(x => new CurrencyConversionDetailResponse
+                    {
+                        Id = x.Id,
+                        CurrencyId = x.CurrencyId,
+                        Symbol = x.Symbol,
+                        StandardRate = x.StandardRate,
+                        SellRate = x.SellRate,
+                        BuyRate = x.BuyRate
+                    }).ToList()
+                };
+
+                return ApiResponse<CurrencyConversionDetailsResponse>
                     .Success(
                         "Currency conversion retrieved successfully.",
-                        data);
+                        result);
             }
             catch (Exception ex)
             {
@@ -123,7 +137,7 @@ namespace QuickBalance.API.Services
                     "Error retrieving conversion. Code: {Code}",
                     code);
 
-                return ApiResponse<List<CurrencyConversionResponse>>
+                return ApiResponse<CurrencyConversionDetailsResponse>
                     .Failure(
                         "An error occurred while retrieving currency conversion.");
             }

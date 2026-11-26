@@ -27,9 +27,9 @@
 
         public int TaxAccountId { get; set; }
 
-        public string SecondName { get; set; } = string.Empty;
+        public string? SecondName { get; set; } = string.Empty;
 
-        public string TaxType { get; set; } = "T";
+        public string? TaxType { get; set; } = "T";
     }
 
 

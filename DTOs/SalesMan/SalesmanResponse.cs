@@ -7,17 +7,17 @@
     {
         public int Id { get; set; }
 
-        public int EmployeeCode { get; set; }
+        public int? EmployeeCode { get; set; }
 
         public string SalesmanName { get; set; } = string.Empty;
 
-        public string SecondName { get; set; } = string.Empty;
+        public string? SecondName { get; set; } = string.Empty;
 
-        public string PrintName { get; set; } = string.Empty;
+        public string? PrintName { get; set; } = string.Empty;
 
-        public string Address { get; set; } = string.Empty;
+        public string? Address { get; set; } = string.Empty;
 
-        public string Phone { get; set; } = string.Empty;
+        public string? Phone { get; set; } = string.Empty;
 
         public string Email { get; set; } = string.Empty;
 

@@ -33,7 +33,7 @@ namespace QuickBalance.API.Controllers.Master
         // GET: api/v1/currency-conversions?page=1&pageSize=10
         // =========================================================
         [HttpGet]
-        [ProducesResponseType(typeof(ApiResponse<List<CurrencyConversionResponse>>),StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<CurrencyConversionResponse>>),StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError),StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
 
@@ -76,7 +76,7 @@ namespace QuickBalance.API.Controllers.Master
         // Returns all details belonging to the selected date.
         // =========================================================
         [HttpGet("{id:int}")]
-        [ProducesResponseType(typeof(ApiResponseWithoutPagination<CurrencyConversionResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponseWithoutPagination<CurrencyConversionDetailsResponse>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
 

@@ -10,6 +10,7 @@ namespace QuickBalance.API.CLS
         public string? Address { get; set; }
         public string? Phone { get; set; }
         public string? Email { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("isActive")]
         public bool Active { get; set; }
 
         public int LogId { get; set; }
@@ -75,7 +76,12 @@ namespace QuickBalance.API.CLS
         public string? SwiftCode { get; set; }
 
         public decimal OpenBal { get; set; }
-        public string CrDr { get; set; } = "Cr";
+        private string _crDr = "CR";
+        public string CrDr
+        {
+            get => _crDr;
+            set => _crDr = string.IsNullOrWhiteSpace(value) ? "CR" : value.Trim().ToUpperInvariant();
+        }
         public int CurCode { get; set; }
         public decimal CurConvRate { get; set; } = 1m;
         public List<PendingBillRequest> PendingBills { get; set; } = new();
@@ -154,6 +160,7 @@ namespace QuickBalance.API.CLS
             public string? Address { get; set; }
             public string? Phone { get; set; }
             public string? Email { get; set; }
+            [System.Text.Json.Serialization.JsonPropertyName("isActive")]
             public bool Active { get; set; }
 
             public int LogId { get; set; }
@@ -215,7 +222,13 @@ namespace QuickBalance.API.CLS
 
             // Opening balance
             public decimal OpenBal { get; set; }
-            public string CrDr { get; set; } = "Cr";
+            // Wire value is always uppercase CR/DR (rule 4, D12); old "Cr"/"Dr" values are normalised on read.
+            private string _crDr = "CR";
+            public string CrDr
+            {
+                get => _crDr;
+                set => _crDr = string.IsNullOrWhiteSpace(value) ? "CR" : value.Trim().ToUpperInvariant();
+            }
             public int CurCode { get; set; }
             public decimal CurConvRate { get; set; } = 1m;
 

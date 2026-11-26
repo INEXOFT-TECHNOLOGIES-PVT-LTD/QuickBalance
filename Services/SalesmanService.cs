@@ -251,7 +251,8 @@ namespace QuickBalance.API.Services
                     printName = salesmanName;
 
                 int employeeCode = request.EmployeeCode
-                    ?? existing.EmployeeCode;
+                    ?? existing.EmployeeCode
+                    ?? 0;
 
                 bool connectWithAccount = request.ConnectWithAccount;
                 int accountId = connectWithAccount ? request.AccountId : 0;

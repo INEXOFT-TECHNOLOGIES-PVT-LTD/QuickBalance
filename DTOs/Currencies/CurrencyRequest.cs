@@ -35,7 +35,7 @@ namespace QuickBalance.API.DTOs.Currencies
 
         public int? ConvMode { get; set; }
 
-        public bool? BaseFlg { get; set; }
+        public bool BaseFlg { get; set; } = false;
 
         [StringLength(50, ErrorMessage = "Secondary symbol cannot exceed 50 characters.")]
         public string? SecSymbol { get; set; }

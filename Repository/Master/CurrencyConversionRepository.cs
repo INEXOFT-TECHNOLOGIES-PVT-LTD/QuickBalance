@@ -25,12 +25,12 @@ namespace QuickBalance.API.Repository
                 SELECT
                     CC.CODE AS Id,
                     CC.BASECURR AS BaseCurrencyId,
-                    CC.ALTCURR AS AlternateCurrencyId,
+                    ISNULL(CC.ALTCURR, 0) AS CurrencyId,
                     CM.SYMBOL AS Symbol,
                     CC.TDATE AS ConversionDate,
-                    CC.STDRATE AS StandardRate,
-                    CC.SELLRATE AS SellRate,
-                    CC.BUYRATE AS BuyRate,
+                    ISNULL(CC.STDRATE, 0) AS StandardRate,
+                    ISNULL(CC.SELLRATE, 0) AS SellRate,
+                    ISNULL(CC.BUYRATE, 0) AS BuyRate,
                     CC.LOGCD AS UserId,
                     CC.UTIME AS UpdatedAt
                 FROM dbo.CURRCONV CC
@@ -94,12 +94,12 @@ namespace QuickBalance.API.Repository
                 SELECT
                     CC.CODE AS Id,
                     CC.BASECURR AS BaseCurrencyId,
-                    CC.ALTCURR AS AlternateCurrencyId,
+                    ISNULL(CC.ALTCURR, 0) AS CurrencyId,
                     CM.SYMBOL AS Symbol,
                     CC.TDATE AS ConversionDate,
-                    CC.STDRATE AS StandardRate,
-                    CC.SELLRATE AS SellRate,
-                    CC.BUYRATE AS BuyRate,
+                    ISNULL(CC.STDRATE, 0) AS StandardRate,
+                    ISNULL(CC.SELLRATE, 0) AS SellRate,
+                    ISNULL(CC.BUYRATE, 0) AS BuyRate,
                     CC.LOGCD AS UserId,
                     CC.UTIME AS UpdatedAt
                 FROM dbo.CURRCONV CC
@@ -124,12 +124,12 @@ namespace QuickBalance.API.Repository
                 SELECT
                     CC.CODE AS Id,
                     CC.BASECURR AS BaseCurrencyId,
-                    CC.ALTCURR AS AlternateCurrencyId,
+                    ISNULL(CC.ALTCURR, 0) AS CurrencyId,
                     CM.SYMBOL AS Symbol,
                     CC.TDATE AS ConversionDate,
-                    CC.STDRATE AS StandardRate,
-                    CC.SELLRATE AS SellRate,
-                    CC.BUYRATE AS BuyRate,
+                    ISNULL(CC.STDRATE, 0) AS StandardRate,
+                    ISNULL(CC.SELLRATE, 0) AS SellRate,
+                    ISNULL(CC.BUYRATE, 0) AS BuyRate,
                     CC.LOGCD AS UserId,
                     CC.UTIME AS UpdatedAt
                 FROM dbo.CURRCONV CC

@@ -152,7 +152,7 @@ public class BomService : IBomService
                 }
 
                 bool accountExists = await _repository.CheckAccountExistsAsync(
-                    info.AccountId);
+                    info.AccountId.Value);
 
                 if (!accountExists)
                 {
@@ -231,7 +231,7 @@ public class BomService : IBomService
 
             foreach (var info in request.AdditionalInfo)
             {
-                if (info.Amount <= 0)
+                if ((info.Amount ?? 0) <= 0)
                     continue;
 
                 int result = await _repository.CreateAdditionalInfoAsync(
@@ -268,7 +268,7 @@ public class BomService : IBomService
     // GET ALL bill of materialss
     // ---------------------------------------------------------
 
-    public async Task<ApiResponse<IReadOnlyList<BomListDetailsDto>>> GetAllAsync(
+    public async Task<ApiResponse<IReadOnlyList<BomListItemDto>>> GetAllAsync(
         int page,
         int pageSize,
         string? search,
@@ -278,12 +278,12 @@ public class BomService : IBomService
         {
             if (page <= 0 || pageSize <= 0)
             {
-                return ApiResponse<IReadOnlyList<BomListDetailsDto>>.Failure(
+                return ApiResponse<IReadOnlyList<BomListItemDto>>.Failure(
                     "Page and page size must be greater than zero.");
             }
             if (pageSize > 100)
             {
-                return ApiResponse<IReadOnlyList<BomListDetailsDto>>.Failure(
+                return ApiResponse<IReadOnlyList<BomListItemDto>>.Failure(
                     "Page size must not exceed 100.");
             }
 
@@ -296,14 +296,14 @@ public class BomService : IBomService
                 search,
                 active);
 
-            return ApiResponse<IReadOnlyList<BomListDetailsDto>>.SuccessWithPagination(
+            return ApiResponse<IReadOnlyList<BomListItemDto>>.SuccessWithPagination(
                 "bill of materials retrieved successfully.", result.Data,
                 result.Pagination);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving bill of materials list.");
-            return ApiResponse<IReadOnlyList<BomListDetailsDto>>.Failure(
+            return ApiResponse<IReadOnlyList<BomListItemDto>>.Failure(
                 "Failed to retrieve bill of materialss.");
         }
     }
@@ -329,7 +329,23 @@ public class BomService : IBomService
 
             var result = new BomDetailsDto
             {
-                bilofm_details = master,
+                Id = master.Id,
+                BomName = master.BomName,
+                Alias = master.Alias,
+                PrCode = master.PrCode,
+                Qty = master.Qty,
+                Unit = master.Unit,
+                Expences = master.Expences,
+                McGenFlg = master.McGenFlg,
+                McGen = master.McGen,
+                McConsFlg = master.McConsFlg,
+                McCons = master.McCons,
+                LogCd = master.LogCd,
+                UTime = master.UTime,
+                SecondName = master.SecondName,
+                ProductName = master.ProductName,
+                UnitName = master.UnitName,
+                IsActive = master.IsActive,
                 Items = items,
                 AdditionalInfo = additionalInfo
             };
@@ -402,7 +418,7 @@ public class BomService : IBomService
                 }
 
                 bool accountExists = await _repository.CheckAccountExistsAsync(
-                    info.AccountId);
+                    info.AccountId.Value);
 
                 if (!accountExists)
                 {
@@ -463,7 +479,7 @@ public class BomService : IBomService
 
             foreach (var info in request.AdditionalInfo)
             {
-                if (info.Amount <= 0)
+                if ((info.Amount ?? 0) <= 0)
                     continue;
 
                 int result = await _repository.CreateAdditionalInfoAsync(id, info);
@@ -572,10 +588,10 @@ public class BomService : IBomService
         if (request.Qty <= 0)
             return "Produced quantity must be greater than zero.";
 
-        if (IsYes(request.McGenFlg) && (!request.McGen.HasValue || request.McGen <= 0))
+        if (request.McGenFlg && (!request.McGen.HasValue || request.McGen <= 0))
             return "Generated godown is required.";
 
-        if (IsYes(request.McConsFlg) &&
+        if (request.McConsFlg &&
             (!request.McCons.HasValue || request.McCons <= 0))
         {
             return "Consumed godown is required.";
@@ -622,16 +638,11 @@ public class BomService : IBomService
             if (info.Amount < 0)
                 return "Additional information amount cannot be negative.";
 
-            if (info.Amount > 0 && info.AccountId <= 0)
+            if (info.Amount > 0 && (info.AccountId ?? 0) <= 0)
                 return "Account is required when additional information amount is greater than zero.";
         }
 
         return string.Empty;
-    }
-
-    private static bool IsYes(string? value)
-    {
-        return value?.Trim().ToUpperInvariant() is "Y" or "YES" or "TRUE" or "1";
     }
 
     private async Task CleanupAsync(int bomCode, int userId)

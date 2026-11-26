@@ -30,7 +30,7 @@ namespace QuickBalance.API.Controllers.Master
         // GET ALL - PAGINATED
         // ============================================================
         [HttpGet]
-        [ProducesResponseType(typeof(ApiResponse<LedgerGroupDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<LedgerGroupDto>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
@@ -59,26 +59,26 @@ namespace QuickBalance.API.Controllers.Master
             int totalPages = (int)Math.Ceiling(
                 result.TotalRecords / (double)request.PageSize);
 
-            return Ok(new
-            {
-                status = true,
-                message = "Ledger group list retrieved successfully.",
-                data = result.Data,
-                pagination = new
+            IReadOnlyList<LedgerGroupDto> rows =
+                result.Data ?? new List<LedgerGroupDto>();
+
+            return Ok(ApiResponse<IReadOnlyList<LedgerGroupDto>>.SuccessWithPagination(
+                "Ledger group list retrieved successfully.",
+                rows,
+                new PaginationInfo
                 {
-                    page = request.Page,
-                    pageSize = request.PageSize,
-                    totalRecords = result.TotalRecords,
-                    totalPages
-                }
-            });
+                    Page = request.Page,
+                    PageSize = request.PageSize,
+                    TotalRecords = (int)result.TotalRecords,
+                    TotalPages = totalPages
+                }));
         }
 
         // ============================================================
         // GET BY ID
         // ============================================================
         [HttpGet("{id:int}")]
-        [ProducesResponseType(typeof(ApiResponseWithoutPagination<LedgerGroupDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<LedgerGroupDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
@@ -86,30 +86,20 @@ namespace QuickBalance.API.Controllers.Master
         {
             if (id <= 0)
             {
-                return BadRequest(new
-                {
-                    status = false,
-                    message = "Invalid ledger group ID."
-                });
+                return BadRequest(
+                    ApiResponseWithError.Failure("Invalid ledger group ID."));
             }
 
             var data = await ledgerGroupDB.SearchByIDs(id);
 
             if (data == null)
             {
-                return BadRequest(new
-                {
-                    status = false,
-                    message = "Ledger group not found."
-                });
+                return BadRequest(
+                    ApiResponseWithError.Failure("Ledger group not found."));
             }
 
-            return Ok(new
-            {
-                status = true,
-                message = "Ledger group retrieved successfully.",
-                data
-            });
+            return Ok(ApiResponse<LedgerGroupDto>.Success(
+                "Ledger group retrieved successfully.", data));
         }
 
         // ============================================================
@@ -231,22 +221,22 @@ namespace QuickBalance.API.Controllers.Master
                 {
                     if (childGroups.Count > 0)
                     {
-                        groupCode = childGroups[0].GroupCode + 1;
+                        groupCode = childGroups[0].GroupCode.GetValueOrDefault() + 1;
                     }
                     else
                     {
-                        groupCode = parent.GroupCode * 10000;
+                        groupCode = parent.GroupCode.GetValueOrDefault() * 10000;
                     }
                 }
                 else
                 {
                     if (childGroups.Count > 0)
                     {
-                        groupCode = childGroups[0].GroupCode + 1;
+                        groupCode = childGroups[0].GroupCode.GetValueOrDefault() + 1;
                     }
                     else
                     {
-                        groupCode = parent.GroupCode + 1;
+                        groupCode = parent.GroupCode.GetValueOrDefault() + 1;
                     }
                 }
 
@@ -437,7 +427,7 @@ namespace QuickBalance.API.Controllers.Master
             string crDr = (request.CrDr ?? "").Trim().ToUpperInvariant();
 
             // MAIN / SUB GROUP
-            int groupCode = existing.GroupCode;
+            int groupCode = existing.GroupCode.GetValueOrDefault();
             int mainGroupId = 0;
 
             if (request.MainGroup)
@@ -445,7 +435,7 @@ namespace QuickBalance.API.Controllers.Master
                 // Preserve the existing code unless a new one is supplied.
                 groupCode = (request.GroupCode ?? 0) > 0
                     ? request.GroupCode!.Value
-                    : existing.GroupCode;
+                    : existing.GroupCode.GetValueOrDefault();
             }
             else
             {
@@ -506,7 +496,7 @@ namespace QuickBalance.API.Controllers.Master
 
                 groupCode = (request.GroupCode ?? 0) > 0
                     ? request.GroupCode!.Value
-                    : existing.GroupCode;
+                    : existing.GroupCode.GetValueOrDefault();
             }
 
             // FINAL ACCOUNT (resolved value: request for a main group,
@@ -546,7 +536,7 @@ namespace QuickBalance.API.Controllers.Master
             // SEQUENCE NUMBER
             int sequenceNo = (request.SequenceNo ?? 0) > 0
                 ? request.SequenceNo!.Value
-                : existing.SequenceNo;
+                : existing.SequenceNo.GetValueOrDefault();
 
             var sequenceExists =
                 await ledgerGroupDB.CheckSeqNoExists(sequenceNo, id);
@@ -749,7 +739,7 @@ namespace QuickBalance.API.Controllers.Master
         // CUSTOMER / SUPPLIER LEDGER GROUPS
         // ============================================================
         [HttpGet("customer-supplier")]
-        [ProducesResponseType(typeof(ApiResponseWithoutPagination<LedgerGroupDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponseWithoutPagination<IReadOnlyList<LedgerGroupDto>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
@@ -771,11 +761,12 @@ namespace QuickBalance.API.Controllers.Master
                         "Invalid type. Use C for Customer or S for Supplier."));
             }
 
-            var data =
-                await ledgerGroupDB.CustOrSupLedgerGroup(type);
+            IReadOnlyList<LedgerGroupDto> data =
+                await ledgerGroupDB.CustOrSupLedgerGroup(type)
+                ?? new List<LedgerGroupDto>();
 
             return Ok(
-                ApiResponseWithoutPagination<object>.Success(
+                ApiResponseWithoutPagination<IReadOnlyList<LedgerGroupDto>>.Success(
                     "Customer/Supplier ledger groups retrieved successfully.",
                     data));
         }
@@ -783,25 +774,20 @@ namespace QuickBalance.API.Controllers.Master
         // FINAL ACCOUNTS LOOKUP
         // ============================================================
         [HttpGet("lookups/final-accounts")]
-        [ProducesResponseType(typeof(ApiResponseWithoutPagination<FinalAccountDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponseWithoutPagination<IReadOnlyList<FinalAccountDto>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
         public IActionResult GetFinalAccountsLookup()
         {
-            var data = ledgerGroupDB.GetFinalAccountsLookup();
+            IReadOnlyList<FinalAccountDto> data =
+                ledgerGroupDB.GetFinalAccountsLookup()
+                ?? new List<FinalAccountDto>();
 
-            return Ok(new
-            {
-                status = true,
-                message = "Final accounts lookup retrieved successfully.",
-                data=data
-                //data = data.Select(item => new
-                //{
-                //    id = item.Code,
-                //    name = item.FinalAccount
-                //}).ToList()
-            });
+            return Ok(
+                ApiResponseWithoutPagination<IReadOnlyList<FinalAccountDto>>.Success(
+                    "Final accounts lookup retrieved successfully.",
+                    data));
         }
 
         // ============================================================

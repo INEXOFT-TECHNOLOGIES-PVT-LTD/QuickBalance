@@ -8,7 +8,7 @@ namespace QuickBalance.API.Interfaces
     {
         Task<ApiResponse<int>> CreateAsync(SalesmanGroupRequest request, int userId);
 
-        Task<ApiResponse<IReadOnlyList<SalesmanGroupResponse>>> GetAllAsync(int page, int pageSize, string? search, int userId, bool? active = null);
+        Task<ApiResponse<IReadOnlyList<SalesmanGroupListItemDto>>> GetAllAsync(int page, int pageSize, string? search, int userId, bool? active = null);
 
         Task<ApiResponse<SalesmanGroupResponse>> GetByIdAsync(int id, int userId);
 

@@ -6,15 +6,25 @@
 
         public string GroupName { get; set; } = string.Empty;
 
-        public string SecondName { get; set; } = string.Empty;
+        public string? SecondName { get; set; } = string.Empty;
 
-        public string PrintName { get; set; } = string.Empty;
+        public string? PrintName { get; set; } = string.Empty;
 
         public bool IsActive { get; set; }
+    }
 
-        public int LogCode { get; set; }
+    /// <summary>Row for GET /api/v1/salesman-groups (list only; no internal fields).</summary>
+    public sealed class SalesmanGroupListItemDto
+    {
+        public int Id { get; set; }
 
-        public DateTime? UpdateTime { get; set; }
+        public string GroupName { get; set; } = string.Empty;
+
+        public string? SecondName { get; set; } = string.Empty;
+
+        public string? PrintName { get; set; } = string.Empty;
+
+        public bool IsActive { get; set; }
     }
 
     public sealed class SalesmanGroupLookupResponse

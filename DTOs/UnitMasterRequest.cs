@@ -29,7 +29,7 @@ namespace QuickBalance.API.DTOs
         public string FormalName { get; set; } = string.Empty;
 
         // Preserves the legacy API response: "YES" or "NO".
-        public bool IsActive { get; set; } = false;
+        public bool IsActive { get; set; } = true;
     }
 
     public sealed class UnitDropdownResponse

@@ -170,7 +170,7 @@ public sealed class PriceCategoryService : IPriceCategoryInterface
     }
 
     // GET ALL
-    public async Task<ApiResponse<IReadOnlyList<PriceCategoryResponse>>>
+    public async Task<ApiResponse<IReadOnlyList<PriceCategoryListItemDto>>>
         GetAllAsync(int page, int pageSize, string? search)
     {
         try
@@ -181,7 +181,7 @@ public sealed class PriceCategoryService : IPriceCategoryInterface
             var result = await _db.GetAllAsync(
                 page, pageSize, search);
 
-            return ApiResponse<IReadOnlyList<PriceCategoryResponse>>.SuccessWithPagination(
+            return ApiResponse<IReadOnlyList<PriceCategoryListItemDto>>.SuccessWithPagination(
                 "Price categories retrieved successfully.",
                 result.Data,
                 result.Pagination);
@@ -190,7 +190,7 @@ public sealed class PriceCategoryService : IPriceCategoryInterface
         {
             _logger.LogError(ex, "Error retrieving price categories.");
 
-            return ApiResponse<IReadOnlyList<PriceCategoryResponse>>.Failure(
+            return ApiResponse<IReadOnlyList<PriceCategoryListItemDto>>.Failure(
                 "Unable to retrieve price categories.");
         }
     }

@@ -11,11 +11,19 @@ public sealed class PriceCategoryResponse
         = [];
 }
 
-public sealed class PriceCategoryLevelResponse
+/// <summary>Flat row for GET /api/v1/price-categories (list only).</summary>
+public sealed class PriceCategoryListItemDto
 {
     public int Id { get; set; }
 
     public string CategoryName { get; set; } = string.Empty;
+
+    public int LevelCount { get; set; }
+}
+
+public sealed class PriceCategoryLevelResponse
+{
+    public int Id { get; set; }
 
     public string DiscountStructure { get; set; } = string.Empty;
 
