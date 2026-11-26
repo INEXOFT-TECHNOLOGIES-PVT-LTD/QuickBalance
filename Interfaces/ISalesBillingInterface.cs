@@ -28,5 +28,8 @@ namespace QuickBalance.API.Interfaces
         /// Cancels a sales invoice (soft cancel: the invoice is kept with CANCELFLG = 1).
         /// </summary>
         Task<ApiResponse<bool>> CancelAsync(int id, int userId);
+
+        /// <summary>Lines of a sales invoice that can still be returned (for the Sales Return screen).</summary>
+        Task<ApiResponse<SalesBillingPendingResponse>> GetPendingForReturnAsync(SalesBillingPendingRequest request);
     }
 }

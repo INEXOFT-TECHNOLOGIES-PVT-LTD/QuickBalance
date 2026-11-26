@@ -102,9 +102,11 @@ namespace QuickBalance.API.DB
         //      }
 
 
-        public async Task<List<SalesOrderItemDto>> SearchByOrdNoAsync(
-      ClsCordT request)
+        public async Task<List<SalesOrderItemDto>> SearchByOrdNoAsync(ClsCordT request)
         {
+            // Lines in the order they were entered (ORDROWID = slNo from the save).
+            // Before: ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) over the WHOLE CORDT table -> no guaranteed order.
+            // LEFT JOIN PRMAST: a line is still returned even if its product was deleted later.
             const string sql = @"
           SELECT
               CORDT.*,
@@ -116,21 +118,16 @@ namespace QuickBalance.API.DB
               PRMAST.SALESPRICETYPE AS SALESPRICETYPE,
               PRMAST.BMEQN AS BMEQN,
               PRUNITMAS.PRUNITNAME AS PRUNITNAME,
-              PRUNITMAS.SECNAME AS UNITSECNAME
-          FROM
-          (
-              SELECT
-                  C.*,
-                  ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS SL
-              FROM CORDT AS C
-          ) AS CORDT
-          INNER JOIN PRMAST
+              PRUNITMAS.SECNAME AS UNITSECNAME,
+              CAST(ISNULL(CORDT.ORDROWID, 0) AS BIGINT) AS SL
+          FROM CORDT
+          LEFT JOIN PRMAST
               ON PRMAST.PRCODE = CORDT.PRCODE
           LEFT JOIN PRUNITMAS
               ON PRUNITMAS.PRUNITID = CORDT.UNITCODE
           WHERE CORDT.ORDNO = @OrdNo
             AND CORDT.STYPE = @SType
-          ORDER BY CORDT.SL;";
+          ORDER BY CORDT.ORDROWID;";
 
             var result = await db.QueryListAsync<SalesOrderItemDto>(
                 sql,

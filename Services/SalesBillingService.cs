@@ -182,6 +182,45 @@ public sealed class SalesBillingService : ISalesBillingInterface
     }
 
     // ------------------------------------------------------------------
+    // PENDING INVOICE FOR RETURN
+    // ------------------------------------------------------------------
+    public async Task<ApiResponse<SalesBillingPendingResponse>> GetPendingForReturnAsync(SalesBillingPendingRequest request)
+    {
+        try
+        {
+            request ??= new SalesBillingPendingRequest();
+
+            if (request.InvoiceId < 0 || request.ReturnId < 0 || request.CustomerCode < 0)
+                return ApiResponse<SalesBillingPendingResponse>.Failure("Invalid query values.");
+
+            if (request.InvoiceId == 0 && string.IsNullOrWhiteSpace(request.InvoiceNoText))
+                return ApiResponse<SalesBillingPendingResponse>.Failure("Provide invoiceId or invoiceNoText.");
+
+            SalesBillingPendingResponse? pending = await _repository.GetPendingForReturnAsync(request);
+
+            if (pending == null)
+                return ApiResponse<SalesBillingPendingResponse>.Failure("Sales invoice not found.");
+
+            if (pending.Header.IsCancelled)
+                return ApiResponse<SalesBillingPendingResponse>.Failure("This Bill is Cancelled");
+
+            if (request.CustomerCode > 0 && pending.Header.CustomerCode != request.CustomerCode)
+                return ApiResponse<SalesBillingPendingResponse>.Failure("The selected sales invoice belongs to a different customer.");
+
+            // Same wording as the desktop application.
+            if (pending.Items.Count == 0)
+                return ApiResponse<SalesBillingPendingResponse>.Failure("Return completed against this bill");
+
+            return ApiResponse<SalesBillingPendingResponse>.Success("Pending sales invoice details loaded successfully.", pending);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading pending sales invoice {InvoiceId} / {InvoiceNoText}.", request?.InvoiceId, request?.InvoiceNoText);
+            return ApiResponse<SalesBillingPendingResponse>.Failure("Unable to load the pending sales invoice.");
+        }
+    }
+
+    // ------------------------------------------------------------------
     // 1. Validation (business rules)
     // ------------------------------------------------------------------
 

@@ -356,6 +356,137 @@ namespace QuickBalance.API.Repository.Transactions.Sales
         }
 
         // ------------------------------------------------------------------
+        // Pending invoice for return: which lines can still be returned.
+        // Same rule as ASK_SP_ManageSalesReturnDetails: per product, sold minus what OTHER,
+        // NOT-cancelled returns of this invoice already took back. When a product is on several
+        // lines, the returned quantity is taken from the first lines first (by line number).
+        // Replaces the logic of the old ASK_SP_PendingSalesInvoicesInReturn (cursor, INT conversion factor).
+        // ------------------------------------------------------------------
+        private const string PendingForReturnSql = @"
+            DECLARE @InvNo INT = NULL, @OrdNo INT = NULL;
+
+            SELECT TOP 1 @InvNo = INVNO, @OrdNo = ORDNO
+            FROM SALM
+            WHERE STYPE = 'O'
+              AND ((@InvoiceId > 0 AND INVNO = @InvoiceId)
+                OR (@InvoiceId = 0 AND INVNOTEXT = @InvoiceNoText))
+            ORDER BY INVNO DESC;
+
+            DECLARE @MultiAlias BIT = (SELECT TOP 1 MULTIALIAS FROM CONFIGTB);
+
+            -- 1. Header (no row = invoice not found)
+            SELECT
+                M.INVNO AS InvoiceId,
+                M.ORDNO AS InvoiceNo,
+                M.INVNOTEXT AS InvoiceNoText,
+                M.INVDATE AS InvoiceDate,
+                M.CUSTCODE AS CustomerCode,
+                A.ACCNAME AS CustomerName,
+                ISNULL(M.SMCODE, 0) AS SalesmanCode,
+                CASE M.BTYPE WHEN 'C' THEN 'Cash' WHEN 'R' THEN 'Credit' ELSE 'Bank' END AS PayMode,
+                ISNULL(M.DISCP, 0) AS BillDiscountPercent,
+                CAST(ISNULL(M.CANCELFLG, 0) AS BIT) AS IsCancelled
+            FROM SALM M
+            LEFT JOIN ACCMAS A ON A.ID = M.CUSTCODE
+            WHERE M.INVNO = @InvNo;
+
+            -- 2. Lines that still have quantity to return
+            WITH Returned AS (
+                SELECT T.PRCODE, SUM(ISNULL(T.CONVQTY, 0)) AS RETQTY
+                FROM SALT T
+                WHERE T.STYPE = 'R' AND T.RTNINVNO = @OrdNo AND T.INVNO <> @ReturnId
+                  AND NOT EXISTS (SELECT 1 FROM SALM R WHERE R.INVNO = T.INVNO AND ISNULL(R.CANCELFLG, 0) = 1)
+                GROUP BY T.PRCODE
+            ),
+            Lines AS (
+                SELECT
+                    T.TRNROWID, T.PRCODE, P.PRNAME, T.UNITCODE, UN.PRUNITNAME, T.GDWCODE,
+                    ISNULL(T.QTY, 0) AS QTY, ISNULL(T.CONVQTY, 0) AS CONVQTY,
+                    T.RATE, T.PRRATE, T.MRP, T.LDISCPERC, T.LDISCAMT, T.DISCP, T.DISC, T.TAXCODE, T.TAX,
+                    T.BATCH, T.MFGDATE, T.EXPIRY, T.CONVTYPE, T.CONVFACT, T.ALCODE,
+                    P.UNIT AS MAINUNIT,
+                    ISNULL(R.RETQTY, 0) AS RETQTY,
+                    ISNULL(SUM(ISNULL(T.CONVQTY, 0)) OVER (PARTITION BY T.PRCODE ORDER BY T.TRNROWID, T.SNTSLNO
+                        ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS SOLDBEFORE,
+                    AL.ALQTY
+                FROM SALT T
+                LEFT JOIN PRMAST P ON P.PRCODE = T.PRCODE
+                LEFT JOIN PRUNITMAS UN ON UN.PRUNITID = T.UNITCODE
+                LEFT JOIN Returned R ON R.PRCODE = T.PRCODE
+                OUTER APPLY (SELECT ISNULL(MAX(A.QTY), 0) AS ALQTY FROM PRALIAS A
+                             WHERE A.PRCODE = T.PRCODE AND (CAST(A.CODE AS NVARCHAR(MAX)) = T.ALCODE OR A.ALNAME = T.ALNAME)) AL
+                WHERE T.INVNO = @InvNo AND T.STYPE = 'O'
+            ),
+            Allocated AS (
+                SELECT L.*,
+                    CASE WHEN L.RETQTY - L.SOLDBEFORE <= 0 THEN 0
+                         WHEN L.RETQTY - L.SOLDBEFORE >= L.CONVQTY THEN L.CONVQTY
+                         ELSE L.RETQTY - L.SOLDBEFORE END AS ALLOCQTY
+                FROM Lines L
+            )
+            SELECT
+                TRNROWID AS [LineNo],
+                PRCODE AS ProductCode,
+                PRNAME AS ProductName,
+                UNITCODE AS UnitCode,
+                PRUNITNAME AS UnitName,
+                GDWCODE AS GodownCode,
+                QTY AS SoldQuantity,
+                -- main-unit remainder back to the line's unit (same conversion as the old procedure)
+                CASE WHEN ALLOCQTY = 0 THEN QTY
+                     ELSE ((CONVQTY - ALLOCQTY)
+                           / CASE WHEN @MultiAlias = 1 AND ISNULL(ALCODE, '') <> '' AND ALQTY <> 0 THEN ALQTY ELSE CAST(1 AS DECIMAL(18, 6)) END)
+                           * CASE WHEN UNITCODE = MAINUNIT THEN 1 WHEN CONVTYPE = 1 AND ISNULL(CONVFACT, 0) <> 0 THEN CONVFACT ELSE 1 END
+                           / CASE WHEN UNITCODE <> MAINUNIT AND CONVTYPE = 0 AND ISNULL(CONVFACT, 0) <> 0 THEN CONVFACT ELSE 1 END
+                END AS ReturnableQuantity,
+                CONVQTY - ALLOCQTY AS ReturnableConversionQuantity,
+                ISNULL(RATE, 0) AS Rate,
+                ISNULL(PRRATE, 0) AS PurchaseRate,
+                ISNULL(MRP, 0) AS Mrp,
+                ISNULL(LDISCPERC, 0) AS ItemDiscountPercent,
+                ISNULL(LDISCAMT, 0) AS ItemDiscountAmount,
+                ISNULL(DISCP, 0) AS DiscountPercent,
+                ISNULL(DISC, 0) AS DiscountAmount,
+                TAXCODE AS TaxCode,
+                ISNULL(TAX, 0) AS TaxPercent,
+                BATCH AS Batch,
+                MFGDATE AS MfgDate,
+                EXPIRY AS ExpiryDate,
+                ISNULL(CONVTYPE, 0) AS ConversionType,
+                ISNULL(CONVFACT, 1) AS ConversionFactor
+            FROM Allocated
+            WHERE CONVQTY - ALLOCQTY > 0
+            ORDER BY TRNROWID;";
+
+        public async Task<SalesBillingPendingResponse?> GetPendingForReturnAsync(SalesBillingPendingRequest request)
+        {
+            await using SqlConnection connection =
+                _connectionFactory.CreateConnection(new Variable());
+
+            await connection.OpenAsync();
+
+            using SqlMapper.GridReader results = await connection.QueryMultipleAsync(
+                PendingForReturnSql,
+                new
+                {
+                    request.InvoiceId,
+                    InvoiceNoText = request.InvoiceNoText?.Trim() ?? string.Empty,
+                    request.ReturnId
+                });
+
+            SalesBillingPendingHeaderResponse? header =
+                await results.ReadFirstOrDefaultAsync<SalesBillingPendingHeaderResponse>();
+
+            if (header == null)
+                return null;
+
+            List<SalesBillingPendingItemResponse> items =
+                (await results.ReadAsync<SalesBillingPendingItemResponse>()).ToList();
+
+            return new SalesBillingPendingResponse { Header = header, Items = items };
+        }
+
+        // ------------------------------------------------------------------
         // Runs a stored procedure on its OWN connection: opened here and
         // closed automatically by "await using", even if an error happens.
         // ------------------------------------------------------------------

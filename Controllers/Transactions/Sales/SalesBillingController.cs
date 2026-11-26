@@ -9,7 +9,7 @@ using QuickBalance.API.Services;
 namespace QuickBalance.API.Controllers.Transactions.Sales
 {
     [ApiController]
-    [Tags("28. Sales Billing")]
+    [Tags("26. Sales Billing")]
     [Route("api/v1/sales-billing")]
     [Authorize]
     public sealed class SalesBillingController : ControllerBase
@@ -85,6 +85,17 @@ namespace QuickBalance.API.Controllers.Transactions.Sales
         {
             var result = await _service.CancelAsync(id, _currentUser.UserId);
 
+            return result.Status ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
+        /// Lines of a sales invoice that can still be returned (used by the Sales Return screen).
+        /// Query: invoiceId OR invoiceNoText; returnId when editing a return; optional customerCode.
+        /// </summary>
+        [HttpGet("pending")]
+        public async Task<IActionResult> Pending([FromQuery] SalesBillingPendingRequest request)
+        {
+            var result = await _service.GetPendingForReturnAsync(request);
             return result.Status ? Ok(result) : BadRequest(result);
         }
     }

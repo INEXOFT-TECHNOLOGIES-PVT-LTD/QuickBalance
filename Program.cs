@@ -170,6 +170,12 @@ builder.Services.AddScoped<SalesManRepository>();
 builder.Services.AddScoped<ISalesmanInterface, SalesmanService>();
 builder.Services.AddScoped<SalesBillingRepository>();
 builder.Services.AddScoped<ISalesBillingInterface, SalesBillingService>();
+// Sales Return (new layered API)
+builder.Services.AddScoped<SalesReturnRepository>();
+builder.Services.AddScoped<ISalesReturnInterface, SalesReturnService>();
+// Sales Order (layered)
+builder.Services.AddScoped<SalesOrderRepository>();
+builder.Services.AddScoped<ISalesOrderInterface, SalesOrderService>();
 // ============================================================
 // CONTROLLERS AND JSON
 // ============================================================

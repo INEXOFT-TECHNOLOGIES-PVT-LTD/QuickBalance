@@ -1,5 +1,4 @@
-﻿using Azure.Core;
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 using QuickBalance.API.DTOs;
 using System.Data;
 
@@ -134,8 +133,14 @@ namespace QuickBalance.API.DB
             parameters.Add(new SqlParameter("@PAGE", SqlDbType.Int) { Value = request.Page });
             parameters.Add(new SqlParameter("@PAGESIZE", SqlDbType.Int) { Value = request.PageSize });
             parameters.Add(new SqlParameter("@SEARCH", SqlDbType.NVarChar, -1) { Value = request.Search ?? "" });
-            parameters.Add(new SqlParameter("@SORTBY", SqlDbType.NVarChar, 50) { Value = request.SortBy == null ? "" : request.SortBy == "ordNo" || request.SortBy == "orderNo" ? "no" : "date" });
-            parameters.Add(new SqlParameter("@SORTDIRECTION", SqlDbType.NVarChar, 50) { Value = request.SortDirection == null ? "" : request.SortDirection.ToUpper() == "ASC" ? "ASC" : "DESC" });
+            // Always send a valid sort. Before, no sortBy sent "" -> the procedure had no ORDER BY match,
+            // so OFFSET/FETCH paging returned rows in random order (duplicates / missing rows between pages).
+            string sortBy = (request.SortBy ?? string.Empty).Trim().ToLowerInvariant();
+            string procedureSortBy = sortBy == "ordno" || sortBy == "orderno" || sortBy == "no" ? "no" : "date";
+            string procedureSortDirection = string.Equals(request.SortDirection, "ASC", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
+
+            parameters.Add(new SqlParameter("@SORTBY", SqlDbType.NVarChar, 50) { Value = procedureSortBy });
+            parameters.Add(new SqlParameter("@SORTDIRECTION", SqlDbType.NVarChar, 50) { Value = procedureSortDirection });
 
             return await db.ExecuteStoredProcedure("ASK_SP_PendingSalesOrderInInvoices", parameters);
         }

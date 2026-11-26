@@ -14,6 +14,7 @@ using System.Text.Json;
 
 namespace QuickBalance.API.Controllers.Transactions.Sales
 {
+    [ApiExplorerSettings(IgnoreApi = true)]   // hidden: replaced by the new layered API
     [ApiController]
     [Tags("26. Sales Invoices")]
 
