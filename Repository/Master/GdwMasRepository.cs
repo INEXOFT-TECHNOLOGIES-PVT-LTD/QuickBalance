@@ -228,7 +228,7 @@ namespace QuickBalance.API.Repository.Master
         // GET ALL - PAGINATED
         // =========================================================
 
-        public async Task<PagedResponse<LocationDto>> GetAllAsync(
+        public async Task<PagedResponse<LocationListItemDto>> GetAllAsync(
             int page,
             int pageSize,
             string? search,
@@ -299,16 +299,14 @@ namespace QuickBalance.API.Repository.Master
                     ACTIVE AS IsActive,
                     STKACCID AS StockAccountId,
                     STKPLFLG AS StockPLFlag,
-                    SECNAME AS SecondName,
-                    LOGCD AS LogCd,
-                    UTIME AS UTime
+                    SECNAME AS SecondName
                 FROM dbo.GDWMAS
                 {whereClause}
                 ORDER BY GDWID  DESC
                 OFFSET @Offset ROWS
                 FETCH NEXT @PageSize ROWS ONLY;";
 
-            var data = await _db.QueryListAsync<LocationDto>(
+            var data = await _db.QueryListAsync<LocationListItemDto>(
                 dataSql,
                 new
                 {
@@ -321,7 +319,7 @@ namespace QuickBalance.API.Repository.Master
             int totalPages = (int)Math.Ceiling(
                 totalRecords / (double)pageSize);
 
-            return new PagedResponse<LocationDto>
+            return new PagedResponse<LocationListItemDto>
             {
                 Data = data.ToList(),
                 Pagination = new PaginationInfo

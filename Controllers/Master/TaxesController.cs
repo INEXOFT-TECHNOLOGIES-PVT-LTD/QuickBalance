@@ -51,7 +51,7 @@ public sealed class TaxesController : ControllerBase
     // =========================================================
 
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<TaxMasterResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<TaxMasterResponse>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]

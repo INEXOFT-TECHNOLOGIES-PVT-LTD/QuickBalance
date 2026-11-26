@@ -40,21 +40,44 @@ namespace QuickBalance.API.DTOs
 
         public int? BaseCurrencyId { get; set; }
 
-        public int? AlternateCurrencyId { get; set; }
+        public int CurrencyId { get; set; }
 
         public string? Symbol { get; set; }
 
         public DateTime? ConversionDate { get; set; }
 
-        public decimal? StandardRate { get; set; }
+        public decimal StandardRate { get; set; }
 
-        public decimal? SellRate { get; set; }
+        public decimal SellRate { get; set; }
 
-        public decimal? BuyRate { get; set; }
+        public decimal BuyRate { get; set; }
 
         //public int? UserId { get; set; }
 
         //public DateTime? UpdatedAt { get; set; }
+    }
+
+    /// <summary>GET /currency-conversions/{id}: mirrors the request shape.</summary>
+    public class CurrencyConversionDetailsResponse
+    {
+        public DateTime? ConversionDate { get; set; }
+
+        public List<CurrencyConversionDetailResponse> Details { get; set; } = new();
+    }
+
+    public class CurrencyConversionDetailResponse
+    {
+        public int Id { get; set; }
+
+        public int CurrencyId { get; set; }
+
+        public string? Symbol { get; set; }
+
+        public decimal StandardRate { get; set; }
+
+        public decimal SellRate { get; set; }
+
+        public decimal BuyRate { get; set; }
     }
 
     public class CurrencyConversionCurrencyResponse

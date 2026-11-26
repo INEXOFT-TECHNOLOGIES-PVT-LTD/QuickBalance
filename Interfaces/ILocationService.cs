@@ -9,7 +9,7 @@ namespace QuickBalance.API.Interfaces
             LocationMasterRequest request,
             int userId);
 
-        Task<ApiResponse<IReadOnlyList<LocationDto>>> GetAllAsync(
+        Task<ApiResponse<IReadOnlyList<LocationListItemDto>>> GetAllAsync(
             int page,
             int pageSize,
             string? search,

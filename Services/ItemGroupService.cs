@@ -240,7 +240,7 @@ public sealed class ItemGroupService : IItemGroupInterface
     }
 
 
-    public async Task<ApiResponse<IReadOnlyList<ItemGroupResponse>>>GetAllAsync(int page, int pageSize, string? search, bool? active)
+    public async Task<ApiResponse<IReadOnlyList<ItemGroupListItemDto>>>GetAllAsync(int page, int pageSize, string? search, bool? active)
     {
         try
         {
@@ -249,7 +249,7 @@ public sealed class ItemGroupService : IItemGroupInterface
 
             var result = await _db.GetAllAsync(page, pageSize, search, active);
 
-            return ApiResponse<IReadOnlyList<ItemGroupResponse>>.SuccessWithPagination(
+            return ApiResponse<IReadOnlyList<ItemGroupListItemDto>>.SuccessWithPagination(
                 "Item groups retrieved successfully.",
                 result.Data,
                 result.Pagination
@@ -259,7 +259,7 @@ public sealed class ItemGroupService : IItemGroupInterface
         {
             _logger.LogError(ex, "Error retrieving Item group");
 
-            return ApiResponse<IReadOnlyList<ItemGroupResponse>>.Failure(
+            return ApiResponse<IReadOnlyList<ItemGroupListItemDto>>.Failure(
                 "Unable to retrieve Item group.");
         }
     }
@@ -481,21 +481,22 @@ public sealed class ItemGroupService : IItemGroupInterface
         }
     }
 
-    public async Task<ApiResponse<IReadOnlyList<ItemGroupResponse>>>
+    public async Task<ApiResponseWithoutPagination<IReadOnlyList<ItemGroupResponse>>>
         GetPrimaryGroupsAsync()
     {
         try
         {
             var result = await _db.GetPrimaryGroupsAsync();
 
-            return ApiResponse<IReadOnlyList<ItemGroupResponse>>.Success(
-                "Primary groups retrieved successfully.", result);
+            return ApiResponseWithoutPagination<IReadOnlyList<ItemGroupResponse>>.Success(
+                "Primary groups retrieved successfully.",
+                result ?? new List<ItemGroupResponse>());
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving primary groups.");
 
-            return ApiResponse<IReadOnlyList<ItemGroupResponse>>.Failure(
+            return ApiResponseWithoutPagination<IReadOnlyList<ItemGroupResponse>>.Failure(
                 "Unable to retrieve primary groups.");
         }
     }

@@ -7,7 +7,7 @@ namespace QuickBalance.API.Interfaces
     {
         Task<ApiResponse<int>> CreateAsync(BomRequest request, int userId);
 
-        Task<ApiResponse<IReadOnlyList<BomListDetailsDto>>> GetAllAsync(
+        Task<ApiResponse<IReadOnlyList<BomListItemDto>>> GetAllAsync(
             int page,
             int pageSize,
             string? search,

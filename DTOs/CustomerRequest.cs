@@ -29,12 +29,13 @@ namespace QuickBalance.API.DTOs
         [EmailAddress(ErrorMessage = "Enter a valid email address.")]
         public string? Email { get; set; }
 
+        [System.Text.Json.Serialization.JsonPropertyName("isActive")]
         public bool Active { get; set; } = true;
 
         [Range(1, int.MaxValue, ErrorMessage = "Ledger group ID must be greater than zero.")]
         public int? LedgerGroupId { get; set; }
 
-        public int StateCode { get; set; }
+        public int? StateCode { get; set; }
 
         [StringLength(100, ErrorMessage = "Print name cannot exceed 100 characters.")]
         public string? PrintName { get; set; }
@@ -76,6 +77,7 @@ namespace QuickBalance.API.DTOs
         public bool CurFlg { get; set; }
 
         [Range(1, int.MaxValue, ErrorMessage = "Salesman ID must be greater than zero.")]
+        [System.Text.Json.Serialization.JsonPropertyName("salesManId")]
         public int? SalesMan { get; set; }
 
         //[Range(0, int.MaxValue, ErrorMessage = "Credit period cannot be negative.")]
@@ -134,7 +136,12 @@ namespace QuickBalance.API.DTOs
         [Required(ErrorMessage = "Debit/Credit type is required.")]
         [RegularExpression(@"^(?i:DR|CR)$",
     ErrorMessage = "Debit/Credit type must be DR or CR.")]
-        public string CrDr { get; set; } = "CR";
+        public string CrDr
+        {
+            get => _crDr;
+            set => _crDr = string.IsNullOrWhiteSpace(value) ? value! : value.Trim().ToUpperInvariant();
+        }
+        private string _crDr = "DR";
 
         //[Range(0, int.MaxValue, ErrorMessage = "Currency code cannot be negative.")]
         [Range(0, 100000, ErrorMessage = "Currency code must be between 0 and 100000.")]
@@ -301,7 +308,7 @@ namespace QuickBalance.API.DTOs
         public int? Id { get; set; }
 
         [Required(ErrorMessage = "Invoice date is required.")]
-        public DateTime InvoiceDate { get; set; }
+        public DateTime? InvoiceDate { get; set; }
 
         [StringLength(250,
             ErrorMessage = "Narration cannot exceed 250 characters.")]
@@ -317,7 +324,7 @@ namespace QuickBalance.API.DTOs
         public decimal Amount { get; set; }
 
         [Required(ErrorMessage = "Due date is required.")]
-        public DateTime DueDate { get; set; }
+        public DateTime? DueDate { get; set; }
 
         // DR = Debit, CR = Credit
         [Required(ErrorMessage = "Debit/Credit type is required.")]

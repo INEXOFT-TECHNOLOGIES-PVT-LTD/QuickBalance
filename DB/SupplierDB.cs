@@ -214,7 +214,7 @@ namespace QuickBalance.API.DB
         //            var supplier = MapSupplier(reader);
 
         //            supplier.OpenBal = 0m;
-        //            supplier.CrDr = "Cr";
+        //            supplier.CrDr = "CR";
         //            supplier.CurCode = 0;
         //            supplier.CurConvRate = 1m;
         //            supplier.LedgerGroupId = 0;
@@ -4601,7 +4601,7 @@ namespace QuickBalance.API.DB
         {
             // Defaults
             supplier.OpenBal = 0m;
-            supplier.CrDr = "Cr";
+            supplier.CrDr = "CR";
             supplier.CurCode = 0;
             supplier.CurConvRate = 1m;
             supplier.PendingBills = new List<PendingBillRequest>();
@@ -4677,7 +4677,7 @@ namespace QuickBalance.API.DB
                         ? 0m
                         : Convert.ToDecimal(reader["TotalCredit"]);
 
-                    supplier.CrDr = credit >= debit ? "Cr" : "Dr";
+                    supplier.CrDr = credit >= debit ? "CR" : "DR";
                 }
             }
 

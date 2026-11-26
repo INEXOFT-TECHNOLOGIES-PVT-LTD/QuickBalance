@@ -51,7 +51,7 @@ public class BomsController : ControllerBase
     // ---------------------------------------------------------
 
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<BomListDetailsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<BomListItemDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
@@ -76,7 +76,7 @@ public class BomsController : ControllerBase
     // ---------------------------------------------------------
 
     [HttpGet("{id:int}")]
-    [ProducesResponseType(typeof(ApiResponseWithoutPagination<BomListDetailsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponseWithoutPagination<BomDetailsDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]

@@ -48,6 +48,18 @@ namespace QuickBalance.API.DTOs
         //public DateTime? UTime { get; set; }
     }
 
+    /// <summary>Row for GET /api/v1/locations (list only; no internal fields).</summary>
+    public class LocationListItemDto
+    {
+        public int Id { get; set; }
+        public string? LocationName { get; set; }
+        public int GroupId { get; set; }
+        public bool IsActive { get; set; }
+        public int StockAccountId { get; set; }
+        public bool StockPLFlag { get; set; }
+        public string? SecondName { get; set; }
+    }
+
     public class LocationActiveDto
     {
         public int Id { get; set; }

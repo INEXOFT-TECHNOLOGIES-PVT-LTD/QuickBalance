@@ -71,7 +71,7 @@ namespace QuickBalance.API.Controllers.Master
         // =========================================================
 
         [HttpGet]
-        [ProducesResponseType(typeof(ApiResponse<LocationGroupDto>),StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<LocationGroupListItemDto>>),StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError),StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError),StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiResponseWithError),StatusCodes.Status500InternalServerError)]

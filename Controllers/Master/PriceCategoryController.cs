@@ -58,7 +58,7 @@ public sealed class PriceCategoryController : ControllerBase
     // GET ALL
     [HttpGet]
     [ProducesResponseType(
-    typeof(ApiResponse<PriceCategoryResponse>),
+    typeof(ApiResponse<IReadOnlyList<PriceCategoryListItemDto>>),
     StatusCodes.Status200OK)]
     [ProducesResponseType(
     typeof(ApiResponseWithError),

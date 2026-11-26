@@ -27,7 +27,7 @@ namespace QuickBalance.API.Controllers.Master
 
         // GET ALL
         [HttpGet]
-        [ProducesResponseType(typeof(ApiResponseWithoutPagination<LookupItem>),StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<PartyGroupListItem>>),StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError),StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError),StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiResponseWithError),StatusCodes.Status500InternalServerError)]
@@ -38,6 +38,18 @@ namespace QuickBalance.API.Controllers.Master
             [FromQuery] string? search = null)
         {
             var result = await _service.GetAllAsync(groupType, page, pageSize, search);
+            return result.Status ? Ok(result) : BadRequest(result);
+        }
+
+        // GET BY ID
+        [HttpGet("{id:int}")]
+        [ProducesResponseType(typeof(ApiResponse<PartyGroupResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var result = await _service.GetByIdAsync(id);
             return result.Status ? Ok(result) : BadRequest(result);
         }
 

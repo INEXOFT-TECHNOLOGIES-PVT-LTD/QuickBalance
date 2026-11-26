@@ -41,7 +41,7 @@ namespace QuickBalance.API.Controllers.Master
         // GET: api/v1/accounts
         // ============================================================
         [HttpGet]
-        [ProducesResponseType(typeof(ApiResponse<AccountLedgerDtos>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<AccountLedgerDtos>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
@@ -79,25 +79,25 @@ namespace QuickBalance.API.Controllers.Master
                     //request.SortDirection
                 );
 
-                var response = new PaginationResponse<AccountLedgerDtos>
-                {
-                    Data = result.Data,
-                    Page = request.Page,
-                    PageSize = request.PageSize,
-                    TotalRecords = result.TotalRecords,
-                    TotalPages = (int)Math.Ceiling(
-                        result.TotalRecords / (double)request.PageSize)
-                };
+                var response = ApiResponse<IReadOnlyList<AccountLedgerDtos>>.SuccessWithPagination(
+                    "Accounts retrieved successfully.",
+                    result.Data,
+                    new PaginationInfo
+                    {
+                        Page = request.Page,
+                        PageSize = request.PageSize,
+                        TotalRecords = result.TotalRecords,
+                        TotalPages = (int)Math.Ceiling(
+                            result.TotalRecords / (double)request.PageSize)
+                    });
 
                 return Ok(response);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    status = false,
-                    message = ex.Message
-                });
+                _logger.LogError(ex, "Error retrieving accounts.");
+                return StatusCode(500, ApiResponseWithError.Failure(
+                    "An error occurred while retrieving accounts."));
             }
         }
 
