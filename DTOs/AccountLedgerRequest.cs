@@ -105,7 +105,7 @@ namespace QuickBalance.API.DTOs
         public decimal? OpeningBalance { get; set; }
 
         [Required(ErrorMessage = "Opening balance type is required.")]
-        [RegularExpression("^(?i)(CR|DR)$",
+        [RegularExpression("^(CR|DR)$",
             ErrorMessage = "Opening balance type must be either CR or DR.")]
         public string? OpeningBalanceType { get; set; } = "CR";
 
@@ -116,7 +116,6 @@ namespace QuickBalance.API.DTOs
         // Validated in Validate() only when CurrencyFlag is true.
         public decimal? CurrencyConversionRate { get; set; }
 
-        [System.Text.Json.Serialization.JsonPropertyName("isActive")]
         public bool Active { get; set; } = true;
 
         public IEnumerable<ValidationResult> Validate(

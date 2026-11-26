@@ -33,7 +33,7 @@ public sealed class SalesmanGroupController : ControllerBase
     // =========================================================
 
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<SalesmanGroupListItemDto>>), StatusCodes.Status200OK,
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<SalesmanGroupResponse>>), StatusCodes.Status200OK,
         Description = "Salesman groups retrieved successfully with pagination.")]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest,
         Description = "Invalid pagination parameters or user ID.")]

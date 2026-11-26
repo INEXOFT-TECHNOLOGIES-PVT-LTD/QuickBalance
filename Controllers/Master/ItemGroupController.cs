@@ -48,7 +48,7 @@ public sealed class ItemGroupController : ControllerBase
 
     // GET ALL
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<ItemGroupListItemDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<ItemGroupResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
@@ -119,10 +119,6 @@ public sealed class ItemGroupController : ControllerBase
 
     // GET PRIMARY GROUPS
     [HttpGet("primary-groups")]
-    [ProducesResponseType(typeof(ApiResponseWithoutPagination<IReadOnlyList<ItemGroupResponse>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetPrimaryGroups()
     {
         var result = await _service.GetPrimaryGroupsAsync();

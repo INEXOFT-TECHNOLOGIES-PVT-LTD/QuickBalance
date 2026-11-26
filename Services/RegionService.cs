@@ -53,8 +53,7 @@ public class RegionService : IRegionInterface
      int countryId,
      string? search,
      int page,
-     int pageSize,
-     bool? active = null)
+     int pageSize)
     {
         try
         {
@@ -72,7 +71,7 @@ public class RegionService : IRegionInterface
 
             var regions =
                 await _repository.GetRegionsAsync(
-                    countryId, search, page, pageSize, active);
+                    countryId, search, page, pageSize);
 
 
             return ApiResponse<IReadOnlyList<RegionResponse>>.SuccessWithPagination(

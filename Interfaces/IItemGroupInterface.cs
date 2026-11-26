@@ -12,7 +12,7 @@ namespace QuickBalance.API.Interfaces
 
         Task<ApiResponse<ItemGroupResponse>> GetByIdAsync(int id);
 
-        Task<ApiResponse<IReadOnlyList<ItemGroupListItemDto>>> GetAllAsync(
+        Task<ApiResponse<IReadOnlyList<ItemGroupResponse>>> GetAllAsync(
             int page, int pageSize, string? search, bool? active);
 
         Task<ApiResponse<bool>> UpdateAsync(
@@ -20,7 +20,7 @@ namespace QuickBalance.API.Interfaces
 
         Task<ApiResponse<bool>> DeleteAsync(int id, int userId);
 
-        Task<ApiResponseWithoutPagination<IReadOnlyList<ItemGroupResponse>>>
+        Task<ApiResponse<IReadOnlyList<ItemGroupResponse>>>
             GetPrimaryGroupsAsync();
     }
 }

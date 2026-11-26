@@ -30,21 +30,6 @@ namespace QuickBalance.API.Repository.Master
         SECNAME AS SecName
         """;
 
-        // List rows: same as SelectColumns without the internal LOGCD / UTIME.
-        private const string ListColumns = """
-        PRGRPID AS Id,
-        GRPNAME AS GroupName,
-        GRPCODE AS GroupCode,
-        PRIMGRPFLG AS IsPrimaryGroup,
-        PRIMGRPID AS PrimaryGroupId,
-        TAGACCFLG AS TagWithAccount,
-        PURACCID AS PurchaseAccountId,
-        SALESACCID AS SalesAccountId,
-        STOCKACCID AS StockAccountId,
-        ACTIVE AS IsActive,
-        SECNAME AS SecName
-        """;
-
 
 
         public async Task<int> InsertAsync(ItemGroupRequest request, int userId)
@@ -139,7 +124,7 @@ namespace QuickBalance.API.Repository.Master
                 sql, new { Id = id });
         }
 
-        public async Task<PagedResponse<ItemGroupListItemDto>> GetAllAsync(int page,int pageSize,string? search,bool? active)
+        public async Task<PagedResponse<ItemGroupResponse>> GetAllAsync(int page,int pageSize,string? search,bool? active)
         {
             var offset = (page - 1) * pageSize;
 
@@ -167,7 +152,7 @@ namespace QuickBalance.API.Repository.Master
             """;
 
             var dataSql = $"""
-            SELECT {ListColumns}
+            SELECT {SelectColumns}
             FROM dbo.PRGRPMAS
             {where}
             ORDER BY PRGRPID DESC
@@ -178,10 +163,10 @@ namespace QuickBalance.API.Repository.Master
                 await _db.QueryFirstOrDefaultAsync<int>(countSql, parameters);
 
             var data =
-                await _db.QueryListAsync<ItemGroupListItemDto>(
+                await _db.QueryListAsync<ItemGroupResponse>(
                     dataSql, parameters);
 
-            return new PagedResponse<ItemGroupListItemDto>
+            return new PagedResponse<ItemGroupResponse>
             {
                 Data = data,
                 Pagination = new PaginationInfo

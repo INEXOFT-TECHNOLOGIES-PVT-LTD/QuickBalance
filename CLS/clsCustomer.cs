@@ -9,12 +9,11 @@ namespace QuickBalance.API.CLS
         public string? Address { get; set; }
         public string? Phone { get; set; }
         public string? Email { get; set; }
-        [System.Text.Json.Serialization.JsonPropertyName("isActive")]
         public bool Active { get; set; }
         public string? LogId { get; set; }
         public int AccountId { get; set; }
 
-        public int? LedgerGroupId { get; set; }
+        public int LedgerGroupId { get; set; }
         public string? SwiftCode { get; set; }
         public string? StateArabicName { get; set; }
         public string? AccountCode { get; set; }
@@ -41,7 +40,7 @@ namespace QuickBalance.API.CLS
         public string? SecName { get; set; }
         public bool CurFlg { get; set; }
 
-        public int? SalesManId { get; set; }
+        public int SalesManId { get; set; }
         public int CrPeriod { get; set; }
         public bool GrpItem { get; set; }
         public int ItemGroupId { get; set; }
@@ -74,13 +73,7 @@ namespace QuickBalance.API.CLS
         public byte[]? RowVersion { get; set; }
 
         public decimal OpenBal { get; set; }
-        // Wire value is always uppercase CR/DR (rule 4, D12); old "Cr"/"Dr" values are normalised on read.
-        private string _crDr = "DR";
-        public string CrDr
-        {
-            get => _crDr;
-            set => _crDr = string.IsNullOrWhiteSpace(value) ? "DR" : value.Trim().ToUpperInvariant();
-        }
+        public string CrDr { get; set; } = "DR";
         public int CurCode { get; set; }
         public decimal CurConvRate { get; set; } = 1m;
 

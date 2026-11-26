@@ -22,7 +22,7 @@ public sealed class RegionController : ControllerBase
 
     // GET: api/regions?countryId=1
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<RegionResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<List<RegionResponse>>), StatusCodes.Status200OK)]
 
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
@@ -30,23 +30,22 @@ public sealed class RegionController : ControllerBase
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetRegions([FromQuery] int countryId, [FromQuery] int page = 1,
       [FromQuery] int pageSize = 10,
-     [FromQuery] string? search = null,
-     [FromQuery] bool? active = null)
+     [FromQuery] string? search = null)
     {
-        var response = await _regionService.GetRegionsAsync(countryId, search, page, pageSize, active);
+        var response = await _regionService.GetRegionsAsync(countryId, search, page, pageSize);
 
         return response.Status ? Ok(response) : BadRequest(response);
     }
 
     // GET: api/regions/1
-    [HttpGet("{id:int}")]
+    [HttpGet("{regionId:int}")]
     [ProducesResponseType(typeof(ApiResponseWithoutPagination<RegionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetRegionById(int id)
+    public async Task<IActionResult> GetRegionById(int regionId)
     {
-        var response = await _regionService.GetRegionByIdAsync(id);
+        var response = await _regionService.GetRegionByIdAsync(regionId);
 
         //if (!response.Status)
         //    return regionId <= 0 ? BadRequest(response) : BadRequest(response);
@@ -80,16 +79,16 @@ public sealed class RegionController : ControllerBase
     }
 
     // PUT: api/regions/1
-    [HttpPut("{id:int}")]
+    [HttpPut("{regionId:int}")]
     [ProducesResponseType(typeof(ApiResponseWithSuccess), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UpdateRegion(
-        int id,
+        int regionId,
         [FromBody] RegionRequest request)
     {
-        var response = await _regionService.UpdateRegionAsync(id, request);
+        var response = await _regionService.UpdateRegionAsync(regionId, request);
         return response.Status ? Ok(response) : BadRequest(response);
 
         //if (!response.Status)

@@ -13,7 +13,7 @@ public interface IPriceCategoryInterface
 
     Task<ApiResponse<PriceCategoryResponse>> GetByIdAsync(int id);
 
-    Task<ApiResponse<IReadOnlyList<PriceCategoryListItemDto>>> GetAllAsync(
+    Task<ApiResponse<IReadOnlyList<PriceCategoryResponse>>> GetAllAsync(
         int page, int pageSize, string? search);
 
     Task<ApiResponse<bool>> UpdateAsync(

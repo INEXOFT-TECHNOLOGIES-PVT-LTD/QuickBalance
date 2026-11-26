@@ -1122,7 +1122,7 @@ namespace QuickBalance.API.DB
 
 
             // 5. Validate region belongs to the selected country.
-            if (customer.StateCode is null or <= 0)
+            if (customer.StateCode <= 0)
                 return "Please select a valid region.";
 
             const string regionSql = """
@@ -1552,10 +1552,10 @@ namespace QuickBalance.API.DB
             CustomerPendingBillRequest bill,
             decimal amountInBaseCurrency)
         {
-            if (bill.InvoiceDate is null || bill.InvoiceDate == default(DateTime))
+            if (bill.InvoiceDate == default)
                 throw new ArgumentException("Invoice date is required.");
 
-            if (bill.DueDate is null || bill.DueDate == default(DateTime))
+            if (bill.DueDate == default)
                 throw new ArgumentException("Due date is required.");
 
             if (string.IsNullOrWhiteSpace(bill.InvoiceNumber))
@@ -1586,7 +1586,7 @@ namespace QuickBalance.API.DB
             using var command = new SqlCommand(sql, connection, transaction);
 
             command.Parameters.Add("@InvoiceDate", SqlDbType.DateTime).Value =
-                bill.InvoiceDate!.Value;
+                bill.InvoiceDate;
             command.Parameters.Add("@Narration", SqlDbType.NVarChar, 500).Value =
                 (object)bill.Narration ?? DBNull.Value;
             command.Parameters.Add("@InvoiceNumber", SqlDbType.NVarChar, 100).Value =
@@ -1599,7 +1599,7 @@ namespace QuickBalance.API.DB
             amountParameter.Value = amountInBaseCurrency;
 
             command.Parameters.Add("@DueDate", SqlDbType.DateTime).Value =
-                bill.DueDate!.Value;
+                bill.DueDate;
             command.Parameters.Add("@InvoiceType", SqlDbType.NVarChar, 10).Value = "CB";
             command.Parameters.Add("@AccountId", SqlDbType.Int).Value = accountId;
             command.Parameters.Add("@UserId", SqlDbType.Int).Value = userId;
@@ -2200,7 +2200,7 @@ namespace QuickBalance.API.DB
                         .Value = "0";
 
                     command.Parameters.Add("@STATECODE", SqlDbType.Int)
-                        .Value = (object?)customer.StateCode ?? DBNull.Value;
+                        .Value = customer.StateCode;
 
                     command.Parameters.Add("@PRINTNAME", SqlDbType.NVarChar, 255)
                         .Value = (object?)customer.PrintName ?? DBNull.Value;
@@ -2859,10 +2859,10 @@ namespace QuickBalance.API.DB
                 if (bill.Amount < 0)
                     throw new ArgumentException("Bill amount cannot be negative.");
 
-                if (bill.InvoiceDate is null || bill.InvoiceDate == default(DateTime))
+                if (bill.InvoiceDate == default)
                     throw new ArgumentException("Invoice date is required.");
 
-                if (bill.DueDate is null || bill.DueDate == default(DateTime))
+                if (bill.DueDate == default)
                     throw new ArgumentException("Due date is required.");
 
                 var drCr = bill.DrCr?.Trim().ToUpperInvariant();
@@ -2877,11 +2877,11 @@ namespace QuickBalance.API.DB
                 {
                     Id = bill.Id,
                     AccountId = accountId,
-                    InvoiceDate = bill.InvoiceDate!.Value.Date,
+                    InvoiceDate = bill.InvoiceDate.Date,
                     Narration = bill.Narration,
                     InvoiceNumber = bill.InvoiceNumber.Trim(),
                     Amount = bill.Amount,
-                    DueDate = bill.DueDate!.Value.Date,
+                    DueDate = bill.DueDate.Date,
                     LogCode = logCode,
                     DrCr = drCr == "DR" ? "Dr" : "Cr",
 

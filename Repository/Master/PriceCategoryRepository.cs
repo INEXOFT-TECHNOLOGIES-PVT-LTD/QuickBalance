@@ -91,7 +91,7 @@ public sealed class PriceCategoryRepository
     }
 
     // GET ALL - PAGINATION
-    public async Task<PagedResponse<PriceCategoryListItemDto>> GetAllAsync(
+    public async Task<PagedResponse<PriceCategoryResponse>> GetAllAsync(
         int page,
         int pageSize,
         string? search)
@@ -109,8 +109,7 @@ public sealed class PriceCategoryRepository
         const string categoryQuery = """
             SELECT
                 CODE AS Id,
-                MAX(CATNAME) AS CategoryName,
-                COUNT(*) AS LevelCount
+                MAX(CATNAME) AS CategoryName
             FROM dbo.PRICECATMAS
             WHERE ISNULL(DELFLG, 0) = 0
               AND (
@@ -139,10 +138,15 @@ public sealed class PriceCategoryRepository
                 countQuery, parameters);
 
         var categories =
-            await _db.QueryListAsync<PriceCategoryListItemDto>(
+            await _db.QueryListAsync<PriceCategoryResponse>(
                 categoryQuery, parameters);
 
-        return new PagedResponse<PriceCategoryListItemDto>
+        foreach (var category in categories)
+        {
+            category.Levels = await GetLevelsAsync(category.Id);
+        }
+
+        return new PagedResponse<PriceCategoryResponse>
         {
             Data = categories,
             Pagination = new PaginationInfo
@@ -188,6 +192,7 @@ public sealed class PriceCategoryRepository
         const string query = """
             SELECT
                 CODE AS Id,
+                CATNAME AS CategoryName,
                 DISCSTRUCT AS DiscountStructure,
                 LEVFROM AS LevelFrom,
                 LEVTO AS LevelTo,

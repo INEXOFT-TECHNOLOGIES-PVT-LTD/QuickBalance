@@ -73,7 +73,7 @@ namespace QuickBalance.API.Services
         // GET ALL
         // =========================================================
 
-        public async Task<ApiResponse<IReadOnlyList<LocationGroupListItemDto>>>
+        public async Task<ApiResponse<IReadOnlyList<LocationGroupDto>>>
             GetAllAsync(
                 int page,
                 int pageSize,
@@ -91,7 +91,7 @@ namespace QuickBalance.API.Services
                     search,
                     active);
 
-                return ApiResponse<IReadOnlyList<LocationGroupListItemDto>>.SuccessWithPagination(
+                return ApiResponse<IReadOnlyList<LocationGroupDto>>.SuccessWithPagination(
                     "Location groups retrieved successfully.",
                     result.Data,
                     result.Pagination);

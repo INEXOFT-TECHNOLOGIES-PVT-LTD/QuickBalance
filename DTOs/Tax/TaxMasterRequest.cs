@@ -21,32 +21,32 @@ namespace QuickBalance.API.DTOs.Tax
         /// <summary>ACCMAS.ID of the purchase ledger (TAXMAS.PURCODE).</summary>
         [Required(ErrorMessage = "Purchase account is required.")]
         [Range(1, int.MaxValue, ErrorMessage = "Purchase account is required.")]
-        public int PurchaseAccountId { get; set; }
+        public int? PurchaseAccountId { get; set; }
 
         /// <summary>ACCMAS.ID of the purchase return ledger (TAXMAS.PRTNCODE).</summary>
         [Required(ErrorMessage = "Purchase return account is required.")]
         [Range(1, int.MaxValue, ErrorMessage = "Purchase return account is required.")]
-        public int PurchaseReturnAccountId { get; set; }
+        public int? PurchaseReturnAccountId { get; set; }
 
         /// <summary>ACCMAS.ID of the sales ledger (TAXMAS.SALCODE).</summary>
         [Required(ErrorMessage = "Sales account is required.")]
         [Range(1, int.MaxValue, ErrorMessage = "Sales account is required.")]
-        public int SalesAccountId { get; set; }
+        public int? SalesAccountId { get; set; }
 
         /// <summary>ACCMAS.ID of the sales return ledger (TAXMAS.SRTNCODE).</summary>
         [Required(ErrorMessage = "Sales return account is required.")]
         [Range(1, int.MaxValue, ErrorMessage = "Sales return account is required.")]
-        public int SalesReturnAccountId { get; set; }
+        public int? SalesReturnAccountId { get; set; }
 
         /// <summary>ACCMAS.ID of the output VAT ledger used on sales (TAXMAS.VATCODE).</summary>
         [Required(ErrorMessage = "VAT account is required.")]
         [Range(1, int.MaxValue, ErrorMessage = "VAT account is required.")]
-        public int VatAccountId { get; set; }
+        public int? VatAccountId { get; set; }
 
         /// <summary>ACCMAS.ID of the input tax ledger used on purchases (TAXMAS.PTAXCODE).</summary>
         [Required(ErrorMessage = "Tax account is required.")]
         [Range(1, int.MaxValue, ErrorMessage = "Tax account is required.")]
-        public int TaxAccountId { get; set; }
+        public int? TaxAccountId { get; set; }
 
         [StringLength(100)]
         public string? SecondName { get; set; }

@@ -13,6 +13,7 @@ using QuickBalance.API.Repositories;
 using QuickBalance.API.Repository;
 using QuickBalance.API.Repository.Master;
 using QuickBalance.API.Repository.Master.QuickBalance.API.Repository.Master;
+using QuickBalance.API.Repository.Transactions.Sales;
 using QuickBalance.API.Services;
 using System.Security.Claims;
 using System.Text;
@@ -167,6 +168,8 @@ builder.Services.AddScoped<ISalesmanGroupInterface, SalesmanGroupService>();
 
 builder.Services.AddScoped<SalesManRepository>();
 builder.Services.AddScoped<ISalesmanInterface, SalesmanService>();
+builder.Services.AddScoped<SalesBillingRepository>();
+builder.Services.AddScoped<ISalesBillingInterface, SalesBillingService>();
 // ============================================================
 // CONTROLLERS AND JSON
 // ============================================================

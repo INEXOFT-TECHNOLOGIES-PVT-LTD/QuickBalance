@@ -101,7 +101,7 @@ public sealed class ProductController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType(
-        typeof(ApiResponse<IReadOnlyList<ProductResponse>>),
+        typeof(PagedResponse<ProductResponse>),
         StatusCodes.Status200OK)]
     [ProducesResponseType(
         typeof(ApiResponseWithError),

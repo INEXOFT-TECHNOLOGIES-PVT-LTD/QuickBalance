@@ -1,7 +1,6 @@
 ﻿using QuickBalance.API.CLS;
 using QuickBalance.API.DB;
 using QuickBalance.API.DTOs;
-using QuickBalance.API.DTOs.PartyGroup;
 using QuickBalance.API.DTOs.Product;
 using QuickBalance.API.DTOs.Respons_DTO;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -138,26 +137,6 @@ namespace QuickBalance.API.Repository.Master
         }
 
         // =========================================================
-        // GET PARTY GROUP BY ID
-        // =========================================================
-        public async Task<PartyGroupResponse?> GetByIdAsync(int id)
-        {
-            const string sql = @"
-                SELECT
-                    ID AS Id,
-                    ISNULL(GROUPNAME, '') AS GroupName,
-                    GROUPSNAME AS GroupShortName,
-                    CASE GROUPTYPE WHEN 'C' THEN 'Customer' ELSE 'Supplier' END AS GroupType
-                FROM PARTYGROUPMAS
-                WHERE ID = @Id
-                  AND ISNULL(ISDELETED, 0) = 0;";
-
-            return await db.QueryFirstOrDefaultAsync<PartyGroupResponse>(
-                sql,
-                new { Id = id });
-        }
-
-        // =========================================================
         // GET PARTY GROUPS
         // =========================================================
         public async Task<List<LookupItem>> GetAllAsync(
@@ -181,7 +160,7 @@ namespace QuickBalance.API.Repository.Master
         }
 
 
-        public async Task<PagedResponse<PartyGroupListItem>> GetAllAsync(string groupType,int page,int pageSize,string? search)
+        public async Task<PagedResponse<LookupItem>> GetAllAsync(string groupType,int page,int pageSize,string? search)
         {
             if (string.IsNullOrWhiteSpace(groupType))
                 throw new ArgumentException("Group type is required.");
@@ -205,10 +184,7 @@ namespace QuickBalance.API.Repository.Master
                 const string sql = @"
             SELECT
                 ID AS Id,
-                ISNULL(GROUPNAME, '') AS Name,
-                ISNULL(GROUPNAME, '') AS GroupName,
-                GROUPSNAME AS GroupShortName,
-                CASE GROUPTYPE WHEN 'C' THEN 'Customer' ELSE 'Supplier' END AS GroupType
+                ISNULL(GROUPNAME, '') AS Name
             FROM PARTYGROUPMAS
             WHERE GROUPTYPE = @GroupType
               AND ISNULL(ISDELETED, 0) = 0
@@ -234,11 +210,11 @@ namespace QuickBalance.API.Repository.Master
                 countSql,
                 parameters);
 
-            var data = await db.QueryListAsync<PartyGroupListItem>(
+            var data = await db.QueryListAsync<LookupItem>(
                 sql,
                 parameters);
 
-            return new PagedResponse<PartyGroupListItem>
+            return new PagedResponse<LookupItem>
             {
                 Data = data,
                 Pagination = new PaginationInfo

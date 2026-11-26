@@ -57,7 +57,7 @@ namespace QuickBalance.API.Repository.Master
         // GET ALL - PAGINATION + SEARCH + SORT
         // =========================================================
 
-        public async Task<PagedResponse<LocationGroupListItemDto>> GetAllAsync(
+        public async Task<PagedResponse<LocationGroupDto>> GetAllAsync(
             int page,
             int pageSize,
             string? search,
@@ -133,14 +133,16 @@ namespace QuickBalance.API.Repository.Master
                     GRPID AS Id,
                     GRPNAME AS GroupName,
                     ACTIVE AS IsActive,
-                    SECNAME AS SecondName
+                    SECNAME AS SecondName,
+                    LOGCD AS LogCd,
+                    UTIME AS UTime
                 FROM dbo.GDWGRP
                 {whereSql}
                 ORDER BY GRPID DESC
                 OFFSET @Offset ROWS
                 FETCH NEXT @PageSize ROWS ONLY;";
 
-            var data = await _db.QueryListAsync<LocationGroupListItemDto>(
+            var data = await _db.QueryListAsync<LocationGroupDto>(
                 dataSql,
                 new
                 {
@@ -155,7 +157,7 @@ namespace QuickBalance.API.Repository.Master
                 : (int)Math.Ceiling(
                     totalRecords / (double)pageSize);
 
-            return new PagedResponse<LocationGroupListItemDto>
+            return new PagedResponse<LocationGroupDto>
             {
                 Data = data.ToList(),
                 Pagination = new PaginationInfo

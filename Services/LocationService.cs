@@ -89,7 +89,7 @@ namespace QuickBalance.API.Services
         // GET ALL
         // =========================================================
 
-        public async Task<ApiResponse<IReadOnlyList<LocationListItemDto>>> GetAllAsync(
+        public async Task<ApiResponse<IReadOnlyList<LocationDto>>> GetAllAsync(
             int page,
             int pageSize,
             string? search,
@@ -106,7 +106,7 @@ namespace QuickBalance.API.Services
                     search,
                     active);
 
-                return ApiResponse<IReadOnlyList<LocationListItemDto>>.SuccessWithPagination(
+                return ApiResponse<IReadOnlyList<LocationDto>>.SuccessWithPagination(
                     "Locations retrieved successfully.",
                     result.Data,
                     result.Pagination);
@@ -115,7 +115,7 @@ namespace QuickBalance.API.Services
             {
                 _logger.LogError(ex, "Error retrieving locations.");
 
-                return ApiResponse<IReadOnlyList<LocationListItemDto>>.Failure(
+                return ApiResponse<IReadOnlyList<LocationDto>>.Failure(
                     "An error occurred while retrieving locations.");
             }
         }

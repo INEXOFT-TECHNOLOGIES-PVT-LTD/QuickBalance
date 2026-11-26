@@ -159,44 +159,20 @@ namespace QuickBalance.API.Services
             }
         }
 
-        public async Task<ApiResponse<PartyGroupResponse>> GetByIdAsync(int id)
-        {
-            try
-            {
-                if (id <= 0)
-                    return ApiResponse<PartyGroupResponse>.Failure("Invalid group ID.");
-
-                var group = await _repository.GetByIdAsync(id);
-
-                if (group == null)
-                    return ApiResponse<PartyGroupResponse>.Failure("Party group not found.");
-
-                return ApiResponse<PartyGroupResponse>.Success(
-                    "Party group retrieved successfully.", group);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving party group. ID: {Id}", id);
-
-                return ApiResponse<PartyGroupResponse>.Failure(
-                    "Unable to retrieve party group.");
-            }
-        }
-
-        public async Task<ApiResponse<IReadOnlyList<PartyGroupListItem>>> GetAllAsync(
+        public async Task<ApiResponse<IReadOnlyList<LookupItem>>> GetAllAsync(
             string groupType,int page,int pageSize,string? search)
         {
             try
             {
                 if (!IsValidGroupType(groupType))
-                    return ApiResponse<IReadOnlyList<PartyGroupListItem>>.Failure(
+                    return ApiResponse<IReadOnlyList<LookupItem>>.Failure(
                         "Group type must be Customer or Supplier.");
 
                 var type = GetGroupType(groupType);
 
                 //var result = await _repository.GetAllAsync(type);
                 var result = await _repository.GetAllAsync(type, page, pageSize, search);
-                return ApiResponse<IReadOnlyList<PartyGroupListItem>>.SuccessWithPagination(
+                return ApiResponse<IReadOnlyList<LookupItem>>.SuccessWithPagination(
                "Party groups retrieved successfully.",
                result.Data,
                result.Pagination);
@@ -205,7 +181,7 @@ namespace QuickBalance.API.Services
             {
                 _logger.LogError(ex, "Error retrieving party groups.");
 
-                return ApiResponse<IReadOnlyList<PartyGroupListItem>>.Failure(
+                return ApiResponse<IReadOnlyList<LookupItem>>.Failure(
                     "Unable to retrieve party groups.");
             }
         }

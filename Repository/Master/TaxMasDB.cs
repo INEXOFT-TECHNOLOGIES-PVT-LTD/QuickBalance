@@ -82,12 +82,12 @@ public sealed class TaxMasDB
                 request.IsActive,
                 UserId = userId,
                 // Account IDs are validated (> 0) by TaxService before this call.
-                PurchaseAccountId = request.PurchaseAccountId,
-                PurchaseReturnAccountId = request.PurchaseReturnAccountId,
-                SalesAccountId = request.SalesAccountId,
-                SalesReturnAccountId = request.SalesReturnAccountId,
-                VatAccountId = request.VatAccountId,
-                TaxAccountId = request.TaxAccountId,
+                PurchaseAccountId = request.PurchaseAccountId!.Value,
+                PurchaseReturnAccountId = request.PurchaseReturnAccountId!.Value,
+                SalesAccountId = request.SalesAccountId!.Value,
+                SalesReturnAccountId = request.SalesReturnAccountId!.Value,
+                VatAccountId = request.VatAccountId!.Value,
+                TaxAccountId = request.TaxAccountId!.Value,
                 SecondName = request.SecondName ?? string.Empty,
                 request.TaxType
             });
@@ -234,12 +234,12 @@ public sealed class TaxMasDB
                 request.IsActive,
                 UserId = userId,
                 // Account IDs are validated (> 0) by TaxService before this call.
-                PurchaseAccountId = request.PurchaseAccountId,
-                PurchaseReturnAccountId = request.PurchaseReturnAccountId,
-                SalesAccountId = request.SalesAccountId,
-                SalesReturnAccountId = request.SalesReturnAccountId,
-                VatAccountId = request.VatAccountId,
-                TaxAccountId = request.TaxAccountId,
+                PurchaseAccountId = request.PurchaseAccountId!.Value,
+                PurchaseReturnAccountId = request.PurchaseReturnAccountId!.Value,
+                SalesAccountId = request.SalesAccountId!.Value,
+                SalesReturnAccountId = request.SalesReturnAccountId!.Value,
+                VatAccountId = request.VatAccountId!.Value,
+                TaxAccountId = request.TaxAccountId!.Value,
                 SecondName = request.SecondName ?? string.Empty,
                 request.TaxType
             });

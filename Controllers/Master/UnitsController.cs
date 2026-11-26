@@ -33,7 +33,7 @@ public sealed class UnitsController : ControllerBase
 
     [HttpGet]
 
-    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<UnitMasterResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<UnitMasterResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]

@@ -25,6 +25,6 @@ namespace QuickBalance.API.DTOs
         [StringLength(50, ErrorMessage = "Secondary region name cannot exceed 50 characters.")]
         public string? RegionSecName { get; set; }
 
-        public bool IsActive { get; set; } = true;
+        public bool IsActive { get; set; }
     }
 }

@@ -256,13 +256,8 @@ namespace QuickBalance.API.DTOs
         [StringLength(25)]
         public string? PrintName { get; set; }
 
-        [JsonPropertyName("description")]
         [StringLength(100)]
         public string? Desc { get; set; }
-
-        // TODO remove after frontend release: old wire name "desc".
-        [JsonPropertyName("desc")]
-        public string? DescOld { set => Desc ??= value; }
 
         [StringLength(150)]
         public string? UpcCode { get; set; }
@@ -276,13 +271,8 @@ namespace QuickBalance.API.DTOs
         [Range(1, int.MaxValue)]
         public int? GroupId { get; set; }
 
-        [JsonPropertyName("categoryId")]
         [Range(1, int.MaxValue)]
         public int? CatgId { get; set; }
-
-        // TODO remove after frontend release: old wire name "catgId".
-        [JsonPropertyName("catgId")]
-        public int? CatgIdOld { set => CatgId ??= value; }
 
         [Range(1, int.MaxValue)]
         public int? BrandId { get; set; }
@@ -363,23 +353,7 @@ namespace QuickBalance.API.DTOs
         [Range(0, 100000)]
         public int? PriceCatId { get; set; }
 
-        // Default true. "isActive" always wins over the old name "active".
-        private bool? _active = true;
-        private bool _activeSet;
-
-        [JsonPropertyName("isActive")]
-        public bool? Active
-        {
-            get => _active;
-            set { _active = value; _activeSet = true; }
-        }
-
-        // TODO remove after frontend release: old wire name "active".
-        [JsonPropertyName("active")]
-        public bool? ActiveOld
-        {
-            set { if (!_activeSet) _active = value; }
-        }
+        public bool? Active { get; set; }
 
         [Range(typeof(decimal), "0", "100000")]
         public decimal? Stock { get; set; }
@@ -401,29 +375,17 @@ namespace QuickBalance.API.DTOs
 
         public string? Notes { get; set; }
 
-        [JsonPropertyName("bmpl")]
+        [JsonPropertyName("_BMPL")]
         [Range(typeof(decimal), "0", "100000")]
         public decimal? BMPL { get; set; }
 
-        // TODO remove after frontend release: old wire name "_BMPL".
-        [JsonPropertyName("_BMPL")]
-        public decimal? BmplOld { set => BMPL ??= value; }
-
-        [JsonPropertyName("bmpq")]
+        [JsonPropertyName("_BMPQ")]
         [Range(typeof(decimal), "0", "100000")]
         public decimal? BMPQ { get; set; }
 
-        // TODO remove after frontend release: old wire name "_BMPQ".
-        [JsonPropertyName("_BMPQ")]
-        public decimal? BmpqOld { set => BMPQ ??= value; }
-
-        [JsonPropertyName("bmpw")]
+        [JsonPropertyName("_BMPW")]
         [Range(typeof(decimal), "0", "100000")]
         public decimal? BMPW { get; set; }
-
-        // TODO remove after frontend release: old wire name "_BMPW".
-        [JsonPropertyName("_BMPW")]
-        public decimal? BmpwOld { set => BMPW ??= value; }
 
         [Range(typeof(decimal), "0", "100000")]
         public decimal? BaseMrp { get; set; }
@@ -431,20 +393,12 @@ namespace QuickBalance.API.DTOs
         [Range(typeof(decimal), "0", "100000")]
         public decimal? AltMrp { get; set; }
 
-        [JsonPropertyName("slNoTrack")]
+        [JsonPropertyName("_SLNOTRACK")]
         public bool? SLNOTRACK { get; set; }
 
-        // TODO remove after frontend release: old wire name "_SLNOTRACK".
-        [JsonPropertyName("_SLNOTRACK")]
-        public bool? SlNoTrackOld { set => SLNOTRACK ??= value; }
-
-        [JsonPropertyName("bmEqn")]
+        [JsonPropertyName("_BMEQN")]
         [StringLength(50)]
         public string? BMEQN { get; set; }
-
-        // TODO remove after frontend release: old wire name "_BMEQN".
-        [JsonPropertyName("_BMEQN")]
-        public string? BmEqnOld { set => BMEQN ??= value; }
 
         //public int? APRVLABY { get; set; }
         //public DateTime? APRVLADT { get; set; }
@@ -511,23 +465,7 @@ namespace QuickBalance.API.DTOs
         [Range(1, int.MaxValue)]
         public int? InvUnitCode { get; set; }
 
-        // Default true. "isActive" always wins over the old name "active".
-        private bool? _active = true;
-        private bool _activeSet;
-
-        [JsonPropertyName("isActive")]
-        public bool? Active
-        {
-            get => _active;
-            set { _active = value; _activeSet = true; }
-        }
-
-        // TODO remove after frontend release: old wire name "active".
-        [JsonPropertyName("active")]
-        public bool? ActiveOld
-        {
-            set { if (!_activeSet) _active = value; }
-        }
+        public bool? Active { get; set; }
     }
 
     public sealed class ProductImageRequest
