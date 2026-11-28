@@ -240,20 +240,53 @@ namespace QuickBalance.API.Controllers.Master
                     }
                 }
 
-                // Inherit final account and CR/DR from parent.
-                if (!string.IsNullOrWhiteSpace(parent.FinalAccount))
+                // Sub-group codes are always server-generated (create does not
+                // read request.GroupCode). Skip codes already taken by any
+                // non-deleted group (active or inactive) and use the first free one.
+                const int maxCodeAttempts = 1000;
+                var attempts = 0;
+
+                while ((await ledgerGroupDB.GetAllNonDeletedByGroupCode(groupCode)).Count > 0)
                 {
-                    finalAccount = parent.FinalAccount.Trim().ToUpperInvariant();
+                    if (++attempts >= maxCodeAttempts)
+                    {
+                        return BadRequest(new
+                        {
+                            status = false,
+                            message = "Unable to generate a free group code for this parent group. Please contact support."
+                        });
+                    }
+
+                    groupCode++;
                 }
 
+                // Final account: a valid parent value is always used (the request
+                // value is ignored). Otherwise the request value is used.
+                var parentFinalAccount =
+                    (parent.FinalAccount ?? "").Trim().ToUpperInvariant();
+
+                if (allowedFinalAccounts.Contains(parentFinalAccount))
+                {
+                    finalAccount = parentFinalAccount;
+                }
+                else if (finalAccount.Length == 0)
+                {
+                    return BadRequest(new
+                    {
+                        status = false,
+                        message = "Final Account is required for this group (B, P, T or M)."
+                    });
+                }
+
+                // CR/DR is still inherited from the parent.
                 if (!string.IsNullOrWhiteSpace(parent.CrDr))
                 {
                     crDr = parent.CrDr.Trim().ToUpperInvariant();
                 }
             }
 
-            // FINAL ACCOUNT (resolved value: request for a main group,
-            // parent's value for a sub-group)
+            // FINAL ACCOUNT (resolved value; a value sent by the client is
+            // validated here for both main groups and sub-groups)
             if (!allowedFinalAccounts.Contains(finalAccount))
             {
                 return BadRequest(new

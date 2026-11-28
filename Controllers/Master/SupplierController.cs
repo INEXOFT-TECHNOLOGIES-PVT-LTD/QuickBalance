@@ -232,7 +232,7 @@ namespace QuickBalance.API.Controllers.Master
                     return BadRequest(
                         ApiResponseWithoutPagination<object>.Failure(financialError));
                 }
-                var ledgerGroup =await _supplierDB.GetDefaultSupplierLedgerGroup();
+                var ledgerGroup =await _supplierDB.GetDefaultSupplierLedgerGroup(request.LedgerGroupId);
 
                 if (ledgerGroup == null ||
                     string.IsNullOrWhiteSpace(ledgerGroup.GroupCode) ||
@@ -240,7 +240,9 @@ namespace QuickBalance.API.Controllers.Master
                 {
                     return BadRequest(
                         ApiResponseWithError.Failure(
-                            "Default supplier ledger group was not found."));
+                            (request.LedgerGroupId ?? 0) > 0
+                                ? "Selected supplier ledger group does not exist or is inactive."
+                                : "Default supplier ledger group was not found."));
                 }
 
                 //var supplier =  (userId, request);

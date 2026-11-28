@@ -35,11 +35,14 @@ namespace QuickBalance.API.DTOs
         [Range(1, int.MaxValue, ErrorMessage = "Ledger group ID must be greater than zero.")]
         public int? LedgerGroupId { get; set; }
 
+        [Required(ErrorMessage = "Please select a valid region.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a valid region.")]
         public int? StateCode { get; set; }
 
         [StringLength(100, ErrorMessage = "Print name cannot exceed 100 characters.")]
         public string? PrintName { get; set; }
 
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a valid country.")]
         public int CountryCode { get; set; }
 
         [StringLength(100, ErrorMessage = "Bank account name cannot exceed 100 characters.")]

@@ -662,6 +662,7 @@ namespace QuickBalance.API.Repository.Master
                         SELECT 1
                         FROM SMMAST
                         WHERE SMNAME = @SmName
+                          AND ISNULL(DELFLG, 0) = 0
                     )
                     THEN CAST(1 AS BIT)
                     ELSE CAST(0 AS BIT)
@@ -688,6 +689,7 @@ namespace QuickBalance.API.Repository.Master
                         FROM SMMAST
                         WHERE SMNAME = @SmName
                           AND SMCODE <> @SmCode
+                          AND ISNULL(DELFLG, 0) = 0
                     )
                     THEN CAST(1 AS BIT)
                     ELSE CAST(0 AS BIT)

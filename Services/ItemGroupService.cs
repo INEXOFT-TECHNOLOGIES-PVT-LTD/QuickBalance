@@ -482,11 +482,11 @@ public sealed class ItemGroupService : IItemGroupInterface
     }
 
     public async Task<ApiResponseWithoutPagination<IReadOnlyList<ItemGroupResponse>>>
-        GetPrimaryGroupsAsync()
+        GetPrimaryGroupsAsync(string? search = null)
     {
         try
         {
-            var result = await _db.GetPrimaryGroupsAsync();
+            var result = await _db.GetPrimaryGroupsAsync(search);
 
             return ApiResponseWithoutPagination<IReadOnlyList<ItemGroupResponse>>.Success(
                 "Primary groups retrieved successfully.",
@@ -497,6 +497,30 @@ public sealed class ItemGroupService : IItemGroupInterface
             _logger.LogError(ex, "Error retrieving primary groups.");
 
             return ApiResponseWithoutPagination<IReadOnlyList<ItemGroupResponse>>.Failure(
+                "Unable to retrieve primary groups.");
+        }
+    }
+
+    public async Task<ApiResponse<IReadOnlyList<ItemGroupResponse>>>
+        GetPrimaryGroupsPagedAsync(int page, int pageSize, string? search)
+    {
+        try
+        {
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var result = await _db.GetPrimaryGroupsPagedAsync(page, pageSize, search);
+
+            return ApiResponse<IReadOnlyList<ItemGroupResponse>>.SuccessWithPagination(
+                "Primary groups retrieved successfully.",
+                result.Data,
+                result.Pagination);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving primary groups.");
+
+            return ApiResponse<IReadOnlyList<ItemGroupResponse>>.Failure(
                 "Unable to retrieve primary groups.");
         }
     }

@@ -67,11 +67,14 @@ namespace QuickBalance.API.Services
                 }
 
                 int accountId = connectWithAccount ? request.AccountId : 0;
-                var accouuntCheck = await _account.GetAccountById(request.AccountId);
-                if(accouuntCheck==0)
+                if (connectWithAccount)
                 {
-                    return ApiResponse<SalesmanSaveResponse>.Failure(
-                        "Account not found.");
+                    var accouuntCheck = await _account.GetAccountById(request.AccountId);
+                    if (accouuntCheck == 0)
+                    {
+                        return ApiResponse<SalesmanSaveResponse>.Failure(
+                            "Account not found.");
+                    }
                 }
 
                 int newId = await _smMastDB.InsertAsync(
@@ -423,11 +426,9 @@ namespace QuickBalance.API.Services
 
             if (!string.IsNullOrWhiteSpace(request.Email))
             {
-                try
-                {
-                    _ = new MailAddress(request.Email.Trim());
-                }
-                catch
+                // Same rule the removed [EmailAddress] attribute applied.
+                if (!new System.ComponentModel.DataAnnotations.EmailAddressAttribute()
+                        .IsValid(request.Email.Trim()))
                 {
                     return "Incorrect email format.";
                 }

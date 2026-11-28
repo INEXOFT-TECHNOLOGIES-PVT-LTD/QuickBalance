@@ -118,14 +118,30 @@ public sealed class ItemGroupController : ControllerBase
     }
 
     // GET PRIMARY GROUPS
+    // Without `page`: full active list (ApiResponseWithoutPagination).
+    // With `page`: paged list (ApiResponse with pagination). `search` works in both.
     [HttpGet("primary-groups")]
     [ProducesResponseType(typeof(ApiResponseWithoutPagination<IReadOnlyList<ItemGroupResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<ItemGroupResponse>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponseWithError), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetPrimaryGroups()
+    public async Task<IActionResult> GetPrimaryGroups(
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize,
+        [FromQuery] string? search)
     {
-        var result = await _service.GetPrimaryGroupsAsync();
+        if (page.HasValue)
+        {
+            var paged = await _service.GetPrimaryGroupsPagedAsync(
+                page.Value, pageSize ?? 20, search);
+
+            return paged.Status
+                ? Ok(paged)
+                : BadRequest(paged);
+        }
+
+        var result = await _service.GetPrimaryGroupsAsync(search);
 
         return result.Status
             ? Ok(result)

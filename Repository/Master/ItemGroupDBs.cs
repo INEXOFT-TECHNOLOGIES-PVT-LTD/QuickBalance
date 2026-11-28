@@ -326,20 +326,76 @@ namespace QuickBalance.API.Repository.Master
             return await _db.QueryFirstOrDefaultAsync<int>(qry, new { AccountId = accountId });
         }
 
+        private const string PrimaryGroupsWhere = """
+            WHERE ISNULL(DELFLG, 0) = 0
+              AND ACTIVE = 1
+              AND PRIMGRPFLG = 1
+              AND (@Search IS NULL OR GRPNAME LIKE @SearchPattern)
+            """;
+
         public async Task<IReadOnlyList<ItemGroupResponse>>
-            GetPrimaryGroupsAsync()
+            GetPrimaryGroupsAsync(string? search = null)
         {
             var sql = $"""
             SELECT {SelectColumns}
             FROM dbo.PRGRPMAS
-            WHERE ISNULL(DELFLG, 0) = 0
-              AND ACTIVE = 1
-              AND PRIMGRPFLG = 1
+            {PrimaryGroupsWhere}
             ORDER BY GRPNAME;
             """;
 
-            return await _db.QueryListAsync<ItemGroupResponse>(sql);
+            return await _db.QueryListAsync<ItemGroupResponse>(
+                sql, BuildPrimaryGroupSearchParams(search));
         }
+
+        public async Task<PagedResponse<ItemGroupResponse>>
+            GetPrimaryGroupsPagedAsync(int page, int pageSize, string? search)
+        {
+            var parameters = new
+            {
+                Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
+                SearchPattern = $"%{search?.Trim()}%",
+                Offset = (page - 1) * pageSize,
+                PageSize = pageSize
+            };
+
+            var countSql = $"""
+            SELECT COUNT(*)
+            FROM dbo.PRGRPMAS
+            {PrimaryGroupsWhere};
+            """;
+
+            var dataSql = $"""
+            SELECT {SelectColumns}
+            FROM dbo.PRGRPMAS
+            {PrimaryGroupsWhere}
+            ORDER BY GRPNAME
+            OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
+            """;
+
+            var totalRecords =
+                await _db.QueryFirstOrDefaultAsync<int>(countSql, parameters);
+
+            var data =
+                await _db.QueryListAsync<ItemGroupResponse>(dataSql, parameters);
+
+            return new PagedResponse<ItemGroupResponse>
+            {
+                Data = data,
+                Pagination = new PaginationInfo
+                {
+                    Page = page,
+                    PageSize = pageSize,
+                    TotalRecords = totalRecords,
+                    TotalPages = (int)Math.Ceiling(totalRecords / (double)pageSize)
+                }
+            };
+        }
+
+        private static object BuildPrimaryGroupSearchParams(string? search) => new
+        {
+            Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
+            SearchPattern = $"%{search?.Trim()}%"
+        };
     }
 
 }

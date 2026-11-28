@@ -86,7 +86,7 @@ public sealed class PriceCategoryController : ControllerBase
     [HttpGet("{id:int}")]
 
     [ProducesResponseType(
-    typeof(ApiResponseWithoutPagination<PriceCategoryController>),
+    typeof(ApiResponse<PriceCategoryResponse>),
     StatusCodes.Status200OK)]
     [ProducesResponseType(
     typeof(ApiResponseWithError),

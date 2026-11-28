@@ -448,6 +448,24 @@ namespace QuickBalance.API.DB
         }
 
         // ============================================================
+        // CHECK GROUP CODE - FREE-CODE LOOP (create)
+        // All non-deleted groups, active or inactive.
+        // ============================================================
+        public async Task<List<LedgerGroupDto>> GetAllNonDeletedByGroupCode(
+            int groupCode)
+        {
+            const string query = @"
+                SELECT GROUPID AS Id,
+                       GROUPCODE AS GroupCode
+                FROM GRPLDG
+                WHERE GDELFLG = 0 AND GROUPCODE = @GroupCode;";
+
+            return await db.QueryListAsync<LedgerGroupDto>(
+                query,
+                new { GroupCode = groupCode });
+        }
+
+        // ============================================================
         // CHECK GROUP CODE - UPDATE
         // ============================================================
         public async Task<List<LedgerGroupDto>> CheckGroupExists(
