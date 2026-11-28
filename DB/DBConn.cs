@@ -268,7 +268,13 @@ namespace QuickBalance.API.DB
         // =========================================================
         private SqlCommand CreateCommand(string qry)
         {
-            var command = new SqlCommand(qry, GetConnection())
+            if (con == null || con.State != ConnectionState.Open)
+            {
+                throw new InvalidOperationException(
+                    "Connection is not open. Call OpenConnection() first.");
+            }
+
+            var command = new SqlCommand(qry, con)
             {
                 CommandType = CommandType.Text,
                 CommandTimeout = 180
