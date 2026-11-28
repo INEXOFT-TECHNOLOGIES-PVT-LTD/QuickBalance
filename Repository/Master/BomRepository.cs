@@ -104,7 +104,7 @@ namespace QuickBalance.API.Repository.Master
                     request.McCons,
                     UserId = userId,
                     request.SecondName,
-                    request.IsActive
+                    IsActive = request.IsActive ?? true
                 });
         }
 
@@ -133,7 +133,7 @@ namespace QuickBalance.API.Repository.Master
                 LOGCD = @UserId,
                 UTIME = GETDATE(),
                 SECNAME = @SecondName,
-                ACTIVE = @IsActive
+                ACTIVE = ISNULL(@IsActive, ACTIVE)
             WHERE CODE = @Id;";
 
             return await _db.ExecuteAsync(

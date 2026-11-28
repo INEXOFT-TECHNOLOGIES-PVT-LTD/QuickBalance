@@ -18,8 +18,9 @@ namespace QuickBalance.API.DTOs.SalesMan
 
         public string? Phone { get; set; } = "";
 
-        [EmailAddress(ErrorMessage = "Incorrect email format.")]
-        public string Email { get; set; } = "";
+        // Optional. The format is checked in SalesmanService only when not blank
+        // (EmailAddressAttribute rejects "" so it must not be applied here).
+        public string? Email { get; set; } = "";
 
         public bool IsActive { get; set; } = true;
 

@@ -958,12 +958,12 @@ namespace QuickBalance.API.DB
             WHERE GACTIVE=1 AND GROUPID = @GroupId
               AND (@UseDefault = 0 OR GROUPCODE = @GroupCode);";
 
-            bool useDefault = ledgerGroupId <= 0;
+            bool useDefault = (ledgerGroupId ?? 0) <= 0;
 
             using var command = new SqlCommand(sql, connection);
 
             command.Parameters.Add("@GroupId", SqlDbType.Int).Value =
-                useDefault ? 26 : ledgerGroupId;
+                useDefault ? 26 : ledgerGroupId ?? 26;
 
             command.Parameters.Add("@UseDefault", SqlDbType.Bit).Value =
                 useDefault;
@@ -1038,7 +1038,8 @@ namespace QuickBalance.API.DB
 
         public async Task<string?> ValidateCustomerLookupsAsync(
         CustomerRequest customer,
-        int ledgerGroupId)
+        int ledgerGroupId,
+        bool isUpdate = false)
         {
             using var connection = db.GetConnection();
 
@@ -1152,12 +1153,23 @@ namespace QuickBalance.API.DB
             // 6. Validate salesman.
             if (customer.SalesMan > 0)
             {
-                const string salesmanSql = """
-                SELECT SMGRPCODE
-                FROM dbo.SMGRP
-                WHERE SMGRPCODE = @SalesmanId
-                  AND ISNULL(ACTIVE, 1) = 1;
-                """;
+                // Salesman table (SMMAST), not the salesman group table.
+                // Update skips the ACTIVE condition so a customer whose salesman
+                // was later deactivated can still be saved.
+                string salesmanSql = isUpdate
+                    ? """
+                      SELECT SMCODE
+                      FROM dbo.SMMAST
+                      WHERE SMCODE = @SalesmanId
+                        AND ISNULL(DELFLG, 0) = 0;
+                      """
+                    : """
+                      SELECT SMCODE
+                      FROM dbo.SMMAST
+                      WHERE SMCODE = @SalesmanId
+                        AND ISNULL(ACTIVE, 1) = 1
+                        AND ISNULL(DELFLG, 0) = 0;
+                      """;
 
                 var salesman = await db.QueryFirstOrDefaultAsync<int?>(
                     salesmanSql,

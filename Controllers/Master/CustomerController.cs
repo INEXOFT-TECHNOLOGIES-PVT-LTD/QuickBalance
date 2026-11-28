@@ -259,15 +259,11 @@ public async Task<IActionResult> CreateCustomer(
             }
             catch (Exception ex)
             {
-                //_logger.LogError(
-                //    ex,
-                //    "Error updating customer with ID {CustomerId}",
-                //    id);
-                Console.WriteLine($"Customer update failed: {ex}");
+                _logger.LogError(ex, "Error creating customer.");
 
                 return StatusCode(
                     StatusCodes.Status500InternalServerError,
-                    ApiResponseWithError.Failure("Error updating customer."));
+                    ApiResponseWithError.Failure("Error creating customer."));
             }
             //ca
         }
@@ -460,7 +456,8 @@ public async Task<IActionResult> UpdateCustomer(
                 string? lookupError =
                     await _customerDB.ValidateCustomerLookupsAsync(
                         request,
-                        ledgerGroup.GroupId);
+                        ledgerGroup.GroupId,
+                        isUpdate: true);
 
                 if (lookupError != null)
                 {
@@ -536,11 +533,7 @@ public async Task<IActionResult> UpdateCustomer(
             }
             catch (Exception ex)
             {
-                //_logger.LogError(
-                //    ex,
-                //    "Error updating customer with ID {CustomerId}",
-                //    id);
-                    Console.WriteLine($"Customer update failed: {ex}");
+                _logger.LogError(ex, "Error updating customer {CustomerId}.", id);
 
                 return StatusCode(
                     StatusCodes.Status500InternalServerError,

@@ -304,7 +304,7 @@ namespace QuickBalance.API.Repository.Master
                 (
                     SELECT 1
                     FROM dbo.GDWGRP
-                    WHERE ACTIVE=1 AND GRPNAME = @GroupName
+                    WHERE ISNULL(DELFLG, 0) = 0 AND GRPNAME = @GroupName
                 )
                 THEN 1 ELSE 0 END;";
 
@@ -328,7 +328,7 @@ namespace QuickBalance.API.Repository.Master
                 (
                     SELECT 1
                     FROM dbo.GDWGRP
-                    WHERE ACTIVE=1 AND GRPNAME = @GroupName
+                    WHERE ISNULL(DELFLG, 0) = 0 AND GRPNAME = @GroupName
                     AND GRPID <> @GroupId
                 )
                 THEN 1 ELSE 0 END;";

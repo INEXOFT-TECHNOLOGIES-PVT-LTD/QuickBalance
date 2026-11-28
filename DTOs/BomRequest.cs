@@ -48,7 +48,10 @@ namespace QuickBalance.API.DTOs
             ErrorMessage = "Second name cannot exceed 250 characters.")]
         public string? SecondName { get; set; }
 
-        public bool IsActive { get; set; } = true;
+        /// <summary>
+        /// Create: omitted = active (true). Update: omitted = keep the current value.
+        /// </summary>
+        public bool? IsActive { get; set; }
 
         public List<BomItemRequest> Items { get; set; } = [];
 

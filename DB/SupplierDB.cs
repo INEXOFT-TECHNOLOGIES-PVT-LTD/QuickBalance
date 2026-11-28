@@ -693,8 +693,7 @@ namespace QuickBalance.API.DB
             const string supplierSql = """
                 SELECT S.ID
                 FROM dbo.SUPMAS S
-                WHERE S.ACTIVE = 1
-                  AND S.ID = @Id
+                WHERE S.ID = @Id
                   AND ISNULL(S.DELFLG, 0) = 0;
                 """;
 
@@ -1017,12 +1016,12 @@ namespace QuickBalance.API.DB
             }
 
             // 2. Validate supplier ledger group.
+            // Same rule as the lookup (SupplierLedgerGroupRule).
             const string ledgerSql = @"
                 SELECT COUNT(1)
                 FROM dbo.GRPLDG
                 WHERE GROUPID = @GroupId
-                  AND ISNULL(GDELFLG, 0) = 0
-               AND ISNULL(GACTIVE, 1) = 1;";
+                  AND " + SupplierLedgerGroupRule + ";";
 
             using (var command = new SqlCommand(ledgerSql, connection))
             {
@@ -4199,9 +4198,8 @@ namespace QuickBalance.API.DB
             //ORDER BY GROUPNAME; ";
 
             const string sql = @"
-            SELECT GROUPID AS Id, GROUPNAME AS Name, 
-            GACTIVE, MGROUP, GROUPID FROM GRPLDG WHERE
-            GACTIVE = 1 AND(GROUPID = 27 OR MGROUP = 33)
+            SELECT GROUPID AS Id, GROUPNAME AS Name
+            FROM GRPLDG WHERE " + SupplierLedgerGroupRule + @"
             ORDER BY GROUPNAME ;";
 
             return GetLookupList(sql);
@@ -4340,7 +4338,13 @@ namespace QuickBalance.API.DB
             return $"S{groupCode.Trim()}-{supplierId:D2}";
         }
 
-        public async Task<SupplierLedgerGroupDto?> GetDefaultSupplierLedgerGroup()
+        // Single rule shared by the lookup, the validation and the default/selected
+        // group query: not deleted, active, and either group 27 or under MGROUP 33.
+        private const string SupplierLedgerGroupRule =
+            "ISNULL(GDELFLG, 0) = 0 AND ISNULL(GACTIVE, 1) = 1 AND (GROUPID = 27 OR MGROUP = 33)";
+
+        // Uses ledgerGroupId when > 0, otherwise defaults to 27 (like customers' 26).
+        public async Task<SupplierLedgerGroupDto?> GetDefaultSupplierLedgerGroup(int? ledgerGroupId)
         {
             using var connection = db.GetConnection();
 
@@ -4353,11 +4357,16 @@ namespace QuickBalance.API.DB
             GROUPCODE AS GroupCode
         FROM dbo.GRPLDG
         WHERE GROUPID = @GroupId
-          AND GROUPCODE = @GroupCode;";
+          AND (@UseDefault = 0 OR GROUPCODE = @GroupCode)
+          AND " + SupplierLedgerGroupRule + ";";
+
+            bool useDefault = (ledgerGroupId ?? 0) <= 0;
 
             using var command = new SqlCommand(sql, connection);
 
-            command.Parameters.Add("@GroupId", SqlDbType.Int).Value = 27;
+            command.Parameters.Add("@GroupId", SqlDbType.Int).Value =
+                useDefault ? 27 : ledgerGroupId!.Value;
+            command.Parameters.Add("@UseDefault", SqlDbType.Bit).Value = useDefault;
             command.Parameters.Add("@GroupCode", SqlDbType.VarChar, 20).Value = "20000";
 
             using var reader = await command.ExecuteReaderAsync();

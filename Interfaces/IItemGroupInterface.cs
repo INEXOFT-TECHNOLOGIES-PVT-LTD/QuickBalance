@@ -21,6 +21,9 @@ namespace QuickBalance.API.Interfaces
         Task<ApiResponse<bool>> DeleteAsync(int id, int userId);
 
         Task<ApiResponseWithoutPagination<IReadOnlyList<ItemGroupResponse>>>
-            GetPrimaryGroupsAsync();
+            GetPrimaryGroupsAsync(string? search = null);
+
+        Task<ApiResponse<IReadOnlyList<ItemGroupResponse>>>
+            GetPrimaryGroupsPagedAsync(int page, int pageSize, string? search);
     }
 }

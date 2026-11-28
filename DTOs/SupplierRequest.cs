@@ -31,14 +31,17 @@ namespace QuickBalance.API.DTOs
         [System.Text.Json.Serialization.JsonPropertyName("isActive")]
         public bool Active { get; set; } = true;
 
-        [Range(1, int.MaxValue, ErrorMessage = "Ledger group ID must be greater than zero.")]
+        // Omitted or 0 -> default supplier group (27). Positive values are validated against the shared rule.
+        [Range(0, int.MaxValue, ErrorMessage = "Ledger group ID cannot be negative.")]
         public int? LedgerGroupId { get; set; }
 
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a valid region.")]
         public int StateCode { get; set; }
 
         [StringLength(100, ErrorMessage = "Print name cannot exceed 100 characters.")]
         public string? PrintName { get; set; }
 
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a valid country.")]
         public int CountryCode { get; set; }
 
         // Bank details

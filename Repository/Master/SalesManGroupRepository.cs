@@ -99,6 +99,7 @@ namespace QuickBalance.API.Repository.Master
                         SELECT 1
                         FROM SMGRP
                         WHERE SMGRPNAME = @GroupName
+                          AND ISNULL(DELFLG, 0) = 0
                     )
                     THEN 1 ELSE 0 END
                 AS BIT)";
@@ -123,6 +124,7 @@ namespace QuickBalance.API.Repository.Master
                         FROM SMGRP
                         WHERE SMGRPNAME = @GroupName
                           AND SMGRPCODE <> @GroupCode
+                          AND ISNULL(DELFLG, 0) = 0
                     )
                     THEN 1 ELSE 0 END
                 AS BIT)";
